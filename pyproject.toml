@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "django-admin-tests"
+version = "0.1.0.dev0"
+description = "Automatic admin smoke-test coverage for Django projects."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Vinko Mlačić", email = "vinkomlacic@outlook.com" }]
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "django>=4.2",
+]
+
+[project.optional-dependencies]
+pytest = ["pytest"]
+dev = ["pytest", "pytest-django", "ruff"]
+
+[project.entry-points.pytest11]
+django_admin_tests = "django_admin_tests.pytest_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["django_admin_tests"]
+
+[tool.ruff]
+line-length = 88
+extend-exclude = [".specs-fire", ".specsmd", "node_modules"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "F"]

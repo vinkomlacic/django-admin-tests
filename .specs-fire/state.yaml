@@ -1,9 +1,10 @@
 project:
-  name: "django-admin-tests"
-  description: "Pip-installable Django app that gives host projects automatic admin smoke-test coverage (every registered ModelAdmin's views return 200), runnable under both manage.py test and pytest."
-  created: "2026-08-06T00:00:00Z"
-  fire_version: "0.1.8"
-
+  name: django-admin-tests
+  description: Pip-installable Django app that gives host projects automatic admin
+    smoke-test coverage (every registered ModelAdmin's views return 200),
+    runnable under both manage.py test and pytest.
+  created: 2026-08-06T00:00:00Z
+  fire_version: 0.1.8
 workspace:
   type: greenfield
   structure: monolith
@@ -12,49 +13,68 @@ workspace:
   run_scope_history:
     - choice: single
       items_count: 1
-      timestamp: "2026-08-06T20:29:24Z"
-  scanned_at: "2026-08-06T00:00:00Z"
-
+      timestamp: 2026-08-06T20:29:24Z
+  scanned_at: 2026-08-06T00:00:00Z
 intents:
   - id: core-package
-    title: "Core django_admin_tests Package (v0.1)"
+    title: Core django_admin_tests Package (v0.1)
     status: in_progress
     work_items:
       - id: package-skeleton
-        status: pending
+        status: completed
         complexity: low
         mode: autopilot
+        run_id: run-django-admin-tests-001
+        completed_at: 2026-08-06T20:36:21.169Z
       - id: dev-testapp
         status: pending
         complexity: medium
         mode: confirm
-        depends_on: [package-skeleton]
+        depends_on:
+          - package-skeleton
       - id: admin-smoke-testcase-core
         status: pending
         complexity: high
         mode: validate
-        depends_on: [package-skeleton, dev-testapp]
+        depends_on:
+          - package-skeleton
+          - dev-testapp
       - id: change-view-instantiation
         status: pending
         complexity: high
         mode: validate
-        depends_on: [admin-smoke-testcase-core]
+        depends_on:
+          - admin-smoke-testcase-core
       - id: pytest-plugin
         status: pending
         complexity: medium
         mode: confirm
-        depends_on: [admin-smoke-testcase-core]
+        depends_on:
+          - admin-smoke-testcase-core
       - id: ci-matrix
         status: pending
         complexity: medium
         mode: confirm
-        depends_on: [dev-testapp, admin-smoke-testcase-core, change-view-instantiation, pytest-plugin]
+        depends_on:
+          - dev-testapp
+          - admin-smoke-testcase-core
+          - change-view-instantiation
+          - pytest-plugin
       - id: packaging-release-readiness
         status: pending
         complexity: low
         mode: autopilot
-        depends_on: [package-skeleton, pytest-plugin]
-
+        depends_on:
+          - package-skeleton
+          - pytest-plugin
 runs:
   active: []
-  completed: []
+  completed:
+    - id: run-django-admin-tests-001
+      scope: single
+      work_items:
+        - id: package-skeleton
+          intent: core-package
+          mode: autopilot
+      started: 2026-08-06T20:32:04.052Z
+      completed: 2026-08-06T20:36:21.169Z

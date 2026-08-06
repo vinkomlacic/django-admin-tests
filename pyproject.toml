@@ -9,7 +9,9 @@ description = "Automatic admin smoke-test coverage for Django projects."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Vinko Mlačić", email = "vinkomlacic@outlook.com" }]
+keywords = ["django", "admin", "testing", "smoke-test", "pytest", "django-admin"]
 classifiers = [
     "Framework :: Django",
     "Framework :: Django :: 4.2",
@@ -27,15 +29,38 @@ dependencies = [
     "django>=4.2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/vinkomlacic/django-admin-tests"
+Repository = "https://github.com/vinkomlacic/django-admin-tests"
+Issues = "https://github.com/vinkomlacic/django-admin-tests/issues"
+Changelog = "https://github.com/vinkomlacic/django-admin-tests/blob/master/CHANGELOG.md"
+
 [project.optional-dependencies]
 pytest = ["pytest"]
-dev = ["pytest", "pytest-django", "ruff"]
+dev = ["pytest", "pytest-django", "ruff", "coverage", "build", "twine"]
 
 [project.entry-points.pytest11]
 django_admin_tests = "django_admin_tests.pytest_plugin"
 
 [tool.hatch.build.targets.wheel]
 packages = ["django_admin_tests"]
+
+[tool.hatch.build.targets.sdist]
+# Explicit allowlist, not exclusions: hatchling's default sdist sweeps in
+# every tracked file, which shipped .claude/, .specsmd/ and all of
+# .specs-fire/ (internal planning docs and local tool config) to PyPI.
+# tests/ and testapp/ are kept deliberately so downstream packagers can
+# run the suite from source.
+include = [
+    "/django_admin_tests",
+    "/tests",
+    "/testapp",
+    "/manage.py",
+    "/pyproject.toml",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
 
 [tool.ruff]
 line-length = 88
@@ -47,6 +72,18 @@ quote-style = "double"
 [tool.ruff.lint]
 select = ["E", "F"]
 ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["django_admin_tests"]
+# Measure with `coverage run -m pytest`, NOT `pytest --cov`. This package
+# is imported via its own pytest11 entry point while pytest loads plugins,
+# which happens before pytest-cov starts tracing — so --cov reports its
+# module-level lines as uncovered and understates the real figure by ~13
+# points. Starting coverage first avoids that.
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"

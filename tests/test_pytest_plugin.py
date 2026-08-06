@@ -216,3 +216,33 @@ def test_collection_failure_warns_instead_of_propagating(monkeypatch, recwarn):
 
     assert items == ["existing-item"], "host items must be left intact"
     assert any("could not auto-collect" in str(w.message) for w in recwarn)
+
+
+def test_no_double_injection_when_module_already_collected(monkeypatch):
+    """If the smoke module was already collected, don't inject it twice.
+
+    Matches on resolved path rather than nodeid prefix, so a host project
+    with its own top-level testcases.py isn't mistaken for ours.
+    """
+    called = []
+    monkeypatch.setattr(
+        pytest_plugin,
+        "_collect_smoke_items",
+        lambda session, smoke_path: called.append(smoke_path) or ["injected"],
+    )
+
+    class Item:
+        path = pytest_plugin._smoke_module_path()
+
+    class Config:
+        @staticmethod
+        def getini(name):
+            return True
+
+    items = [Item()]
+    pytest_plugin.pytest_collection_modifyitems(
+        session=None, config=Config(), items=items
+    )
+
+    assert len(items) == 1, "should not have injected a duplicate"
+    assert called == [], "_collect_smoke_items should not have been called"

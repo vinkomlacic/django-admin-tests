@@ -71,12 +71,14 @@ intents:
         run_id: run-django-admin-tests-006
         completed_at: 2026-08-06T22:13:02.651Z
       - id: packaging-release-readiness
-        status: pending
+        status: completed
         complexity: low
         mode: autopilot
         depends_on:
           - package-skeleton
           - pytest-plugin
+        run_id: run-django-admin-tests-007
+        completed_at: 2026-08-06T22:21:53.648Z
 runs:
   active: []
   completed:
@@ -128,3 +130,11 @@ runs:
           mode: confirm
       started: 2026-08-06T22:02:47.425Z
       completed: 2026-08-06T22:13:02.651Z
+    - id: run-django-admin-tests-007
+      scope: single
+      work_items:
+        - id: packaging-release-readiness
+          intent: core-package
+          mode: autopilot
+      started: 2026-08-06T22:13:53.319Z
+      completed: 2026-08-06T22:21:53.648Z

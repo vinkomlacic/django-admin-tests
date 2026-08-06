@@ -36,6 +36,30 @@ jobs:
       - name: ruff format --check
         run: ruff format --check .
 
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run tests under coverage
+        # `coverage run -m pytest`, not `pytest --cov`: this package is
+        # imported via its own pytest11 entry point during plugin loading,
+        # before pytest-cov starts tracing. See [tool.coverage.run].
+        run: coverage run -m pytest tests/
+
+      - name: Enforce coverage threshold
+        # fail_under = 90 comes from pyproject.toml, per testing-standards.md.
+        run: coverage report
+
   test:
     runs-on: ubuntu-latest
     strategy:

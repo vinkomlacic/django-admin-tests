@@ -4,9 +4,13 @@ title: PyPI packaging and release readiness
 intent: core-package
 complexity: low
 mode: autopilot
-status: pending
-depends_on: [package-skeleton, pytest-plugin]
+status: completed
+depends_on:
+  - package-skeleton
+  - pytest-plugin
 created: 2026-08-06T20:27:17Z
+run_id: run-django-admin-tests-007
+completed_at: 2026-08-06T22:21:53.648Z
 ---
 
 # Work Item: PyPI packaging and release readiness

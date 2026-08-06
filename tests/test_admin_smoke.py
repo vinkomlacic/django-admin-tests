@@ -6,6 +6,7 @@ import warnings
 import pytest
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
+from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import override_settings
 
@@ -258,3 +259,72 @@ def test_excluded_models_are_not_smoke_tested():
 
     excluding_case = ExcludingSmokeTest("test_admin_smoke_changelist_returns_200")
     assert Category not in set(excluding_case._smoke_tested_models())
+
+
+@pytest.mark.django_db
+def test_user_factory_overrides_default_superuser_creation():
+    """The documented escape hatch for custom AUTH_USER_MODEL projects."""
+    created = {}
+
+    def make_user():
+        user = get_user_model().objects.create_superuser(
+            username="from-factory",
+            email="from-factory@example.com",
+            password="pw",
+        )
+        created["user"] = user
+        return user
+
+    class FactoryUserSmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
+        user_factory = staticmethod(make_user)
+        model_allowed_status_codes = {RestrictedItem: {403}}
+
+    FactoryUserSmokeTest.setUpClass()
+    try:
+        case = FactoryUserSmokeTest("test_admin_smoke_changelist_returns_200")
+        result = unittest.TestResult()
+        case(result)
+
+        assert result.wasSuccessful(), result.failures + result.errors
+        assert created["user"].username == "from-factory"
+        assert FactoryUserSmokeTest.admin_smoke_test_user == created["user"]
+    finally:
+        FactoryUserSmokeTest.tearDownClass()
+
+
+@pytest.mark.django_db
+def test_unsaved_factory_instance_is_saved_before_use():
+    """register_factory may return an unsaved instance; we persist it."""
+    case = AdminSmokeTest("test_admin_smoke_change_view_returns_200")
+    register_factory(Category, lambda: Category(name="unsaved"))
+
+    instance = case._get_change_view_instance(Category)
+
+    assert instance.pk is not None
+    assert Category.objects.filter(pk=instance.pk).exists()
+
+
+@pytest.mark.django_db
+def test_class_level_allowed_status_codes_apply_to_all_models():
+    """The class-wide override, as opposed to the per-model mapping."""
+
+    class PermissiveSmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
+        allowed_status_codes = {200, 403}
+
+    case = PermissiveSmokeTest("test_admin_smoke_changelist_returns_200")
+
+    assert case._allowed_status_codes_for(Category) == {200, 403}
+    assert case._allowed_status_codes_for(RestrictedItem) == {200, 403}
+
+
+@pytest.mark.django_db
+def test_unresolvable_admin_url_fails_with_model_name():
+    """A model whose admin URL can't be reversed fails clearly, not with a KeyError.
+
+    coding-standards.md requires the offending model be named in the
+    message rather than surfacing a bare lookup error.
+    """
+    case = AdminSmokeTest("test_admin_smoke_changelist_returns_200")
+
+    with pytest.raises(AssertionError, match="Could not resolve changelist URL"):
+        case._reverse_admin_url(Category, "changelist", args=["too", "many", "args"])

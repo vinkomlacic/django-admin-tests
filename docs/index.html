@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>django-admin-tests — automatic admin smoke tests for Django</title>
+<meta name="description" content="Automatic admin smoke-test coverage for Django projects. Every registered ModelAdmin's changelist, add and change views asserted to return 200, under manage.py test or pytest.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1b1f24;
+    --muted: #5b6570;
+    --rule: #e3e7eb;
+    --accent: #0b7a5a;
+    --accent-soft: #e8f4ef;
+    --code-bg: #f6f8fa;
+    --code-fg: #24292f;
+    --warn-bg: #fff8e6;
+    --warn-rule: #e8c96a;
+    --max: 46rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a;
+      --fg: #e6e9ec;
+      --muted: #9aa4ae;
+      --rule: #2a2f35;
+      --accent: #4fd1a5;
+      --accent-soft: #16302a;
+      --code-bg: #1c2126;
+      --code-fg: #dbe1e8;
+      --warn-bg: #2b2413;
+      --warn-rule: #6b5a2a;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+    overflow-wrap: break-word;
+  }
+
+  .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 1.25rem 5rem;
+  }
+
+  header {
+    padding: 3.5rem 0 2rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 2.5rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    margin: 0 0 .5rem;
+    letter-spacing: -.02em;
+  }
+
+  .tagline {
+    font-size: 1.15rem;
+    color: var(--muted);
+    margin: 0 0 1.5rem;
+  }
+
+  .badges { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+
+  .badge {
+    display: inline-block;
+    font-size: .8rem;
+    padding: .2rem .6rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid transparent;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .badge:hover { border-color: var(--accent); }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem 1.25rem;
+    font-size: .92rem;
+    margin-top: 1.5rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--accent); text-decoration: underline; }
+
+  h2 {
+    font-size: 1.35rem;
+    margin: 3rem 0 .75rem;
+    letter-spacing: -.01em;
+    scroll-margin-top: 1rem;
+  }
+  h3 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
+
+  p { margin: 0 0 1rem; }
+
+  a { color: var(--accent); }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    font-size: .875em;
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: .15em .38em;
+    border-radius: 4px;
+  }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: .9rem 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0 0 1.25rem;
+    border: 1px solid var(--rule);
+  }
+  pre code { background: none; padding: 0; font-size: .85rem; line-height: 1.55; }
+
+  .table-scroll { overflow-x: auto; margin: 0 0 1.25rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td {
+    text-align: left;
+    padding: .55rem .7rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { font-weight: 600; white-space: nowrap; }
+  td code { white-space: nowrap; }
+
+  .note {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn-rule);
+    padding: .85rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 0 0 1.25rem;
+    font-size: .93rem;
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note strong { font-weight: 650; }
+
+  ul { padding-left: 1.25rem; margin: 0 0 1rem; }
+  li { margin-bottom: .4rem; }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: .875rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>django-admin-tests</h1>
+  <p class="tagline">Automatic admin smoke-test coverage for Django projects.</p>
+  <div class="badges">
+    <a class="badge" href="https://github.com/vinkomlacic/django-admin-tests">GitHub</a>
+    <a class="badge" href="https://github.com/vinkomlacic/django-admin-tests/blob/master/CHANGELOG.md">Changelog</a>
+    <a class="badge" href="https://github.com/vinkomlacic/django-admin-tests/issues">Issues</a>
+  </div>
+  <nav>
+    <a href="#why">Why</a>
+    <a href="#install">Install</a>
+    <a href="#quickstart">Quickstart</a>
+    <a href="#pytest">pytest plugin</a>
+    <a href="#settings">Settings</a>
+    <a href="#change-views">Change views</a>
+    <a href="#off">Turning it off</a>
+    <a href="#limitations">Limitations</a>
+  </nav>
+</header>
+
+<section id="why">
+  <h2>Why</h2>
+  <p>
+    Admin pages break quietly. A renamed field in <code>list_display</code>, a
+    <code>get_queryset</code> that blows up on a related lookup, a permission tweak that
+    locks out the wrong people — none of it shows up until someone opens the page.
+  </p>
+  <p>
+    This package asserts that every <code>ModelAdmin</code> you register still serves its
+    changelist, add and change views, as part of <em>your</em> test run, under either
+    <code>manage.py test</code> or pytest. No test per model.
+  </p>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <pre><code>pip install django-admin-tests</code></pre>
+  <p>Requires Python 3.10+ and Django 4.2+. The only runtime dependency is Django itself.</p>
+  <div class="note">
+    <p>
+      <strong>Pre-release.</strong> The current version is <code>0.1.0.dev0</code> and has not
+      been published to PyPI yet. Until it is, install from source:
+      <code>pip install git+https://github.com/vinkomlacic/django-admin-tests</code>
+    </p>
+  </div>
+</section>
+
+<section id="quickstart">
+  <h2>Quickstart</h2>
+  <p>Put this in any test module your runner already collects:</p>
+<pre><code>from django_admin_tests.testcases import AdminSmokeTestCase
+
+
+class AdminSmokeTest(AdminSmokeTestCase):
+    pass</code></pre>
+  <p>That's the whole setup. Run your tests as usual:</p>
+<pre><code>pytest
+# or
+python manage.py test</code></pre>
+
+  <div class="note">
+    <p>
+      <strong>Import the module, not the class,</strong> if you'd rather the base class
+      not run as a test in its own right. Test discovery scans the whole module namespace
+      for <code>TestCase</code> subclasses, so importing the name directly makes the
+      un-customized base class run too:
+    </p>
+<pre><code>from django_admin_tests import testcases
+
+
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
+    pass</code></pre>
+  </div>
+
+  <h3>Customizing</h3>
+  <p>Subclassing is also how you adjust behavior:</p>
+<pre><code>from django_admin_tests import testcases
+
+from myapp.models import InternalReport, LegacyThing
+
+
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
+    # Admins that intentionally deny access:
+    model_allowed_status_codes = {InternalReport: {403}}
+    # Admins to skip entirely:
+    excluded_models = {LegacyThing}</code></pre>
+
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Attribute</th><th>Default</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>admin_site</code></td><td><code>admin.site</code></td><td>Test a custom <code>AdminSite</code></td></tr>
+      <tr><td><code>allowed_status_codes</code></td><td><code>{200}</code></td><td>Globally accepted statuses</td></tr>
+      <tr><td><code>model_allowed_status_codes</code></td><td><code>{}</code></td><td>Per-model status overrides</td></tr>
+      <tr><td><code>excluded_models</code></td><td><code>None</code></td><td>Models to skip entirely</td></tr>
+      <tr><td><code>user_factory</code></td><td><code>None</code></td><td>Supply the authenticating user</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="pytest">
+  <h2>pytest plugin</h2>
+  <p>
+    If you use pytest, the bundled plugin can collect the smoke tests without you writing
+    a test file at all. It is <strong>opt-in</strong> — installing this package will never
+    silently add tests to your suite:
+  </p>
+<pre><code># pyproject.toml
+[tool.pytest.ini_options]
+django_admin_tests_auto = true</code></pre>
+  <p>
+    There's no class to subclass in this mode, so configure it through Django settings
+    instead.
+  </p>
+</section>
+
+<section id="settings">
+  <h2>Settings</h2>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr><th>Setting</th><th>Default</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>ADMIN_TESTS_ALLOWED_STATUS_CODES</code></td><td><code>{200}</code></td><td>Globally accepted statuses</td></tr>
+      <tr><td><code>ADMIN_TESTS_MODEL_ALLOWED_STATUS_CODES</code></td><td><code>{}</code></td><td>Per-model overrides, keyed <code>"app_label.ModelName"</code></td></tr>
+      <tr><td><code>ADMIN_TESTS_EXCLUDE</code></td><td><code>[]</code></td><td>Models to skip, same key format</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+<pre><code># settings.py
+ADMIN_TESTS_MODEL_ALLOWED_STATUS_CODES = {"myapp.InternalReport": [403]}
+ADMIN_TESTS_EXCLUDE = ["myapp.LegacyThing"]</code></pre>
+
+  <p>
+    Resolution order is <strong>class attribute → Django setting → built-in default</strong>,
+    so a subclass always wins over settings.
+  </p>
+</section>
+
+<section id="change-views">
+  <h2>Change views need an object</h2>
+  <p>To load a change view, there has to be something to change. An instance is resolved
+    per model in this order:</p>
+  <ul>
+    <li>A factory you registered for that model</li>
+    <li>Any existing row</li>
+    <li>A minimal instance built automatically from the model's fields</li>
+  </ul>
+  <p>
+    If none of those work — most often a required self-referential or circular foreign key —
+    that model's change-view check is <strong>skipped with a warning</strong>, not failed.
+    Register a factory to cover it:
+  </p>
+<pre><code>from django_admin_tests import register_factory
+
+from myapp.models import Tricky
+
+
+def make_tricky():
+    return Tricky.objects.create(...)
+
+
+register_factory(Tricky, make_tricky)</code></pre>
+  <p>
+    Call it anywhere that runs at startup — an <code>AppConfig.ready()</code>, or
+    <code>conftest.py</code>. The auto-builder is written in-house and pulls in no
+    third-party dependency.
+  </p>
+
+  <h3>Custom user models</h3>
+  <p>
+    The test client authenticates as a superuser it creates itself, using the default
+    <code>User</code> fields. If your <code>AUTH_USER_MODEL</code> needs something else,
+    supply a factory:
+  </p>
+<pre><code>class AdminSmokeTest(testcases.AdminSmokeTestCase):
+    user_factory = staticmethod(my_superuser_factory)</code></pre>
+</section>
+
+<section id="off">
+  <h2>Turning it off</h2>
+  <p>The tests are tagged <code>django_admin_tests</code>:</p>
+<pre><code>python manage.py test --exclude-tag=django_admin_tests
+pytest -m "not django_admin_tests"</code></pre>
+</section>
+
+<section id="limitations">
+  <h2>Known limitations</h2>
+  <ul>
+    <li>
+      Models whose change view can't be instantiated are skipped with a warning rather than
+      failed. That's deliberate — a smoke test shouldn't fail because a model is awkward to
+      construct — but an un-covered model can go unnoticed. The warning names it.
+    </li>
+    <li>
+      The auto-builder doesn't try to satisfy custom <code>save()</code> or
+      <code>clean()</code> requirements. Use <code>register_factory</code> for those.
+    </li>
+    <li>
+      Custom <code>AUTH_USER_MODEL</code> support is the <code>user_factory</code> hook only;
+      there's no auto-detection of required fields.
+    </li>
+    <li>
+      Many-to-many fields aren't populated — they aren't needed for the views to render.
+    </li>
+  </ul>
+</section>
+
+<footer>
+  <p>
+    MIT licensed ·
+    <a href="https://github.com/vinkomlacic/django-admin-tests">Source on GitHub</a>
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

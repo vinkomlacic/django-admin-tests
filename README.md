@@ -4,6 +4,8 @@
 
 Automatic admin smoke-test coverage for Django projects.
 
+📖 **[Documentation](https://vinkomlacic.github.io/django-admin-tests/)**
+
 Every `ModelAdmin` you register gets its changelist, add and change views
 asserted to return `200` — as part of *your* test run, under either
 `manage.py test` or pytest. Admin pages break quietly: a renamed field in

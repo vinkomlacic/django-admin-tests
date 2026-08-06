@@ -4,9 +4,13 @@ title: AdminSmokeTestCase core (changelist + add views)
 intent: core-package
 complexity: high
 mode: validate
-status: pending
-depends_on: [package-skeleton, dev-testapp]
+status: completed
+depends_on:
+  - package-skeleton
+  - dev-testapp
 created: 2026-08-06T20:27:17Z
+run_id: run-django-admin-tests-003
+completed_at: 2026-08-06T21:19:59.176Z
 ---
 
 # Work Item: AdminSmokeTestCase core (changelist + add views)

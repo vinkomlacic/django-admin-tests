@@ -60,7 +60,7 @@ intents:
         run_id: run-django-admin-tests-005
         completed_at: 2026-08-06T21:59:37.573Z
       - id: ci-matrix
-        status: pending
+        status: completed
         complexity: medium
         mode: confirm
         depends_on:
@@ -68,6 +68,8 @@ intents:
           - admin-smoke-testcase-core
           - change-view-instantiation
           - pytest-plugin
+        run_id: run-django-admin-tests-006
+        completed_at: 2026-08-06T22:13:02.651Z
       - id: packaging-release-readiness
         status: pending
         complexity: low
@@ -118,3 +120,11 @@ runs:
           mode: confirm
       started: 2026-08-06T21:40:57.953Z
       completed: 2026-08-06T21:59:37.573Z
+    - id: run-django-admin-tests-006
+      scope: single
+      work_items:
+        - id: ci-matrix
+          intent: core-package
+          mode: confirm
+      started: 2026-08-06T22:02:47.425Z
+      completed: 2026-08-06T22:13:02.651Z

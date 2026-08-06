@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  # Only master on push: without this filter, every PR from a branch in
+  # this repo would run the 22-cell matrix twice (once for the push, once
+  # for the pull_request event).
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format --check
+        run: ruff format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # Report every cell independently — one runner regressing must not be
+      # hidden by another cell failing first.
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        django-version: ["4.2", "5.2", "6.1"]
+        runner: [pytest, django]
+        exclude:
+          # Django 4.2 supports Python 3.8-3.12.
+          - python-version: "3.13"
+            django-version: "4.2"
+          - python-version: "3.14"
+            django-version: "4.2"
+          # Django 6.x requires Python 3.12+.
+          - python-version: "3.10"
+            django-version: "6.1"
+          - python-version: "3.11"
+            django-version: "6.1"
+
+    name: py${{ matrix.python-version }} / dj${{ matrix.django-version }} / ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package and dev dependencies
+        # Editable install first (it pulls the newest Django), then pin the
+        # matrix version — the reverse order silently upgrades Django back
+        # to latest and every cell would test the same version.
+        run: |
+          pip install -e ".[dev]"
+          pip install "django==${{ matrix.django-version }}.*"
+
+      - name: Show resolved versions
+        run: python -c "import sys, django; print(sys.version); print('Django', django.__version__)"
+
+      - name: Run tests (pytest)
+        if: matrix.runner == 'pytest'
+        run: pytest tests/
+
+      - name: Run tests (manage.py test)
+        if: matrix.runner == 'django'
+        run: python manage.py test tests

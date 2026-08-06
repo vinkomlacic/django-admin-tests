@@ -4,9 +4,15 @@ title: GitHub Actions CI matrix
 intent: core-package
 complexity: medium
 mode: confirm
-status: pending
-depends_on: [dev-testapp, admin-smoke-testcase-core, change-view-instantiation, pytest-plugin]
+status: completed
+depends_on:
+  - dev-testapp
+  - admin-smoke-testcase-core
+  - change-view-instantiation
+  - pytest-plugin
 created: 2026-08-06T20:27:17Z
+run_id: run-django-admin-tests-006
+completed_at: 2026-08-06T22:13:02.651Z
 ---
 
 # Work Item: GitHub Actions CI matrix

@@ -1,0 +1,19 @@
+project:
+  name: "django-admin-tests"
+  description: "Pip-installable Django app that gives host projects automatic admin smoke-test coverage (every registered ModelAdmin's views return 200), runnable under both manage.py test and pytest."
+  created: "2026-08-06T00:00:00Z"
+  fire_version: "0.1.8"
+
+workspace:
+  type: greenfield
+  structure: monolith
+  autonomy_bias: balanced
+  run_scope_preference: single
+  run_scope_history: []
+  scanned_at: "2026-08-06T00:00:00Z"
+
+intents: []
+
+runs:
+  active: []
+  completed: []

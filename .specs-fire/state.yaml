@@ -27,11 +27,13 @@ intents:
         run_id: run-django-admin-tests-001
         completed_at: 2026-08-06T20:36:21.169Z
       - id: dev-testapp
-        status: pending
+        status: completed
         complexity: medium
         mode: confirm
         depends_on:
           - package-skeleton
+        run_id: run-django-admin-tests-002
+        completed_at: 2026-08-06T20:45:23.730Z
       - id: admin-smoke-testcase-core
         status: pending
         complexity: high
@@ -78,3 +80,11 @@ runs:
           mode: autopilot
       started: 2026-08-06T20:32:04.052Z
       completed: 2026-08-06T20:36:21.169Z
+    - id: run-django-admin-tests-002
+      scope: single
+      work_items:
+        - id: dev-testapp
+          intent: core-package
+          mode: confirm
+      started: 2026-08-06T20:39:57.098Z
+      completed: 2026-08-06T20:45:23.730Z

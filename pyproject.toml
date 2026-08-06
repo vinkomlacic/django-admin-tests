@@ -43,3 +43,7 @@ quote-style = "double"
 
 [tool.ruff.lint]
 select = ["E", "F"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"

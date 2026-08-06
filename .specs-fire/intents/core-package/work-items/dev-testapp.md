@@ -4,9 +4,12 @@ title: Dev-only testapp for dogfooding
 intent: core-package
 complexity: medium
 mode: confirm
-status: pending
-depends_on: [package-skeleton]
+status: completed
+depends_on:
+  - package-skeleton
 created: 2026-08-06T20:27:17Z
+run_id: run-django-admin-tests-002
+completed_at: 2026-08-06T20:45:23.730Z
 ---
 
 # Work Item: Dev-only testapp for dogfooding

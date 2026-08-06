@@ -44,11 +44,13 @@ intents:
         run_id: run-django-admin-tests-003
         completed_at: 2026-08-06T21:19:59.176Z
       - id: change-view-instantiation
-        status: pending
+        status: completed
         complexity: high
         mode: validate
         depends_on:
           - admin-smoke-testcase-core
+        run_id: run-django-admin-tests-004
+        completed_at: 2026-08-06T21:35:26.030Z
       - id: pytest-plugin
         status: pending
         complexity: medium
@@ -98,3 +100,11 @@ runs:
           mode: validate
       started: 2026-08-06T21:06:33.080Z
       completed: 2026-08-06T21:19:59.176Z
+    - id: run-django-admin-tests-004
+      scope: single
+      work_items:
+        - id: change-view-instantiation
+          intent: core-package
+          mode: validate
+      started: 2026-08-06T21:27:38.761Z
+      completed: 2026-08-06T21:35:26.030Z

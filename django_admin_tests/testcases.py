@@ -5,10 +5,19 @@ This module must never import pytest — it has to run unmodified under both
 ``manage.py test`` and pytest (see coding-standards.md).
 """
 
+import warnings
+
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import TestCase, tag
 from django.urls import NoReverseMatch, reverse
+
+from django_admin_tests.factories import get_factory
+from django_admin_tests.instantiation import (
+    AdminSmokeWarning,
+    InstanceBuildError,
+    build_instance,
+)
 
 DEFAULT_ALLOWED_STATUS_CODES = {200}
 
@@ -17,11 +26,17 @@ DEFAULT_ALLOWED_STATUS_CODES = {200}
 class AdminSmokeTestCase(TestCase):
     """Smoke-tests every ModelAdmin registered on ``admin_site``.
 
-    Iterates ``admin_site._registry`` and asserts that the changelist and
-    add views for each registered ``ModelAdmin`` return a status code in
-    ``allowed_status_codes`` (or the per-model override in
-    ``model_allowed_status_codes``). Change-view testing is intentionally
-    out of scope here.
+    Iterates ``admin_site._registry`` and asserts that the changelist, add
+    and change views for each registered ``ModelAdmin`` return a status
+    code in ``allowed_status_codes`` (or the per-model override in
+    ``model_allowed_status_codes``).
+
+    Change views need an object to point at. One is resolved per model in
+    this order: a factory registered via
+    ``django_admin_tests.register_factory``, then any existing row, then a
+    minimal instance built automatically from the model's fields. If none
+    of those work, that model's change-view check is skipped with an
+    ``AdminSmokeWarning`` rather than failing the suite.
 
     Host projects can customize:
 
@@ -66,15 +81,38 @@ class AdminSmokeTestCase(TestCase):
     def setUp(self):
         self.client.force_login(self.admin_smoke_test_user)
 
-    def _reverse_admin_url(self, model, view_name):
+    def _reverse_admin_url(self, model, view_name, args=None):
         opts = model._meta
         url_name = (
             f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_{view_name}"
         )
         try:
-            return reverse(url_name)
+            return reverse(url_name, args=args)
         except NoReverseMatch as exc:
             self.fail(f"Could not resolve {view_name} URL for {model.__name__}: {exc}")
+
+    def _get_change_view_instance(self, model):
+        """Resolve an instance to exercise ``model``'s change view.
+
+        Order: registered factory, then an existing row, then an
+        auto-built minimal instance. Returns None if none succeed, leaving
+        the caller to skip the check.
+        """
+        factory = get_factory(model)
+        if factory is not None:
+            instance = factory()
+            if instance.pk is None:
+                instance.save()
+            return instance
+
+        existing = model._default_manager.first()
+        if existing is not None:
+            return existing
+
+        try:
+            return build_instance(model)
+        except InstanceBuildError:
+            return None
 
     def _assert_allowed_status(self, model, view_name, response):
         allowed = self.model_allowed_status_codes.get(model, self.allowed_status_codes)
@@ -102,3 +140,25 @@ class AdminSmokeTestCase(TestCase):
                 url = self._reverse_admin_url(model, "add")
                 response = self.client.get(url)
                 self._assert_allowed_status(model, "add", response)
+
+    def test_admin_smoke_change_view_returns_200(self):
+        """Every registered ModelAdmin's change view returns an allowed status.
+
+        Models for which no instance can be produced are skipped with an
+        ``AdminSmokeWarning`` rather than failing.
+        """
+        for model in self.admin_site._registry:
+            with self.subTest(model=model):
+                instance = self._get_change_view_instance(model)
+                if instance is None:
+                    message = (
+                        f"Skipping {model.__name__} change view: could not build "
+                        f"an instance. Register a factory with "
+                        f"django_admin_tests.register_factory({model.__name__}, ...) "
+                        f"to cover it."
+                    )
+                    warnings.warn(message, AdminSmokeWarning, stacklevel=2)
+                    self.skipTest(message)
+                url = self._reverse_admin_url(model, "change", args=[instance.pk])
+                response = self.client.get(url)
+                self._assert_allowed_status(model, "change", response)

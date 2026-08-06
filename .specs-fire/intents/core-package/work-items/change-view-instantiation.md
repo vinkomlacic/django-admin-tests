@@ -4,9 +4,12 @@ title: In-house auto-instantiator for change-view testing
 intent: core-package
 complexity: high
 mode: validate
-status: pending
-depends_on: [admin-smoke-testcase-core]
+status: completed
+depends_on:
+  - admin-smoke-testcase-core
 created: 2026-08-06T20:27:17Z
+run_id: run-django-admin-tests-004
+completed_at: 2026-08-06T21:35:26.030Z
 ---
 
 # Work Item: In-house auto-instantiator for change-view testing

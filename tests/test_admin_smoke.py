@@ -1,15 +1,19 @@
 """Dogfoods AdminSmokeTestCase against testapp (this repo's own test suite)."""
 
 import unittest
+import warnings
 
 import pytest
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
+from django.db import connection
 from django.test import override_settings
 
 from django_admin_tests import testcases as admin_smoke_testcases
+from django_admin_tests.factories import register_factory
+from django_admin_tests.instantiation import AdminSmokeWarning
 from tests.custom_admin_site_urls import custom_admin_site
-from testapp.models import Category, RestrictedItem
+from testapp.models import Category, RestrictedItem, SelfReferentialItem
 
 
 class AdminSmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
@@ -26,6 +30,10 @@ class AdminSmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
     testapp/admin.py), so its changelist/add views return 403 rather than
     200 — model_allowed_status_codes documents that as expected, exercising
     the per-model override mechanism.
+
+    SelfReferentialItem is deliberately unbuildable (required self-FK), so
+    its change-view check is skipped with an AdminSmokeWarning rather than
+    failing — see test_admin_smoke_change_view_skips_unbuildable_model.
     """
 
     model_allowed_status_codes = {RestrictedItem: {403}}
@@ -119,3 +127,89 @@ def test_admin_smoke_supports_custom_admin_site():
             assert result.testsRun == 1
         finally:
             CustomSiteAdminSmokeTest.tearDownClass()
+
+
+@pytest.mark.django_db
+def test_admin_smoke_change_view_skips_unbuildable_model():
+    """An unbuildable model is skipped with a warning, not failed.
+
+    SelfReferentialItem has a required self-FK, so no instance can be
+    built from an empty table. The change-view check must record a skip
+    (not a failure) and warn, naming the model.
+    """
+    AdminSmokeTest.setUpClass()
+    try:
+        case = AdminSmokeTest("test_admin_smoke_change_view_returns_200")
+        result = unittest.TestResult()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", AdminSmokeWarning)
+            case(result)
+
+        assert result.wasSuccessful(), result.failures + result.errors
+
+        skipped_models = [reason for _, reason in result.skipped]
+        assert any("SelfReferentialItem" in reason for reason in skipped_models), (
+            skipped_models
+        )
+
+        warned = [
+            str(w.message) for w in caught if issubclass(w.category, AdminSmokeWarning)
+        ]
+        assert any("SelfReferentialItem" in message for message in warned), warned
+    finally:
+        AdminSmokeTest.tearDownClass()
+
+
+@pytest.mark.django_db
+def test_admin_smoke_change_view_uses_registered_factory():
+    """A registered factory takes precedence and covers an otherwise-skipped model."""
+    created = {}
+
+    def selfreferential_factory():
+        # Seeding a required self-FK needs FK checks briefly relaxed —
+        # exactly the kind of model-specific knowledge the auto-builder
+        # can't have, and why register_factory exists.
+        with connection.constraint_checks_disabled():
+            root = SelfReferentialItem(name="factory-root", parent_id=1)
+            root.save()
+            SelfReferentialItem.objects.filter(pk=root.pk).update(parent_id=root.pk)
+        root.refresh_from_db()
+        created["instance"] = root
+        return root
+
+    register_factory(SelfReferentialItem, selfreferential_factory)
+
+    AdminSmokeTest.setUpClass()
+    try:
+        case = AdminSmokeTest("test_admin_smoke_change_view_returns_200")
+        result = unittest.TestResult()
+        case(result)
+
+        assert result.wasSuccessful(), result.failures + result.errors
+        assert "instance" in created, "registered factory was never called"
+        skipped_models = [reason for _, reason in result.skipped]
+        assert not any("SelfReferentialItem" in r for r in skipped_models), (
+            skipped_models
+        )
+    finally:
+        AdminSmokeTest.tearDownClass()
+
+
+@pytest.mark.django_db
+def test_change_view_instance_resolution_order():
+    """Factory beats an existing row, which beats auto-building."""
+    case = AdminSmokeTest("test_admin_smoke_change_view_returns_200")
+
+    # 3. auto-build when nothing else is available
+    built = case._get_change_view_instance(Category)
+    assert built.pk is not None
+
+    # 2. existing row preferred over building another
+    existing = case._get_change_view_instance(Category)
+    assert existing.pk == built.pk
+    assert Category.objects.count() == 1
+
+    # 1. registered factory wins over the existing row
+    from_factory = Category.objects.create(name="from-factory")
+    register_factory(Category, lambda: from_factory)
+    assert case._get_change_view_instance(Category).pk == from_factory.pk

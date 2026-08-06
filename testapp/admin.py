@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from testapp.models import Category, EmptyOnlyModel, Product, RestrictedItem
+from testapp.models import (
+    Category,
+    EmptyOnlyModel,
+    Product,
+    RestrictedItem,
+    SelfReferentialItem,
+)
 
 
 @admin.register(Category)
@@ -17,6 +23,11 @@ class ProductAdmin(admin.ModelAdmin):
 @admin.register(EmptyOnlyModel)
 class EmptyOnlyModelAdmin(admin.ModelAdmin):
     list_display = ("label",)
+
+
+@admin.register(SelfReferentialItem)
+class SelfReferentialItemAdmin(admin.ModelAdmin):
+    list_display = ("name", "parent")
 
 
 @admin.register(RestrictedItem)

@@ -4,9 +4,12 @@ title: Optional pytest11 auto-discovery plugin
 intent: core-package
 complexity: medium
 mode: confirm
-status: pending
-depends_on: [admin-smoke-testcase-core]
+status: completed
+depends_on:
+  - admin-smoke-testcase-core
 created: 2026-08-06T20:27:17Z
+run_id: run-django-admin-tests-005
+completed_at: 2026-08-06T21:59:37.573Z
 ---
 
 # Work Item: Optional pytest11 auto-discovery plugin

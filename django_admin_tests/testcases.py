@@ -18,8 +18,15 @@ from django_admin_tests.instantiation import (
     InstanceBuildError,
     build_instance,
 )
+from django_admin_tests.settings import (
+    DEFAULT_ALLOWED_STATUS_CODES,
+    get_allowed_status_codes,
+    get_excluded_admins,
+    get_model_allowed_status_codes,
+    model_label,
+)
 
-DEFAULT_ALLOWED_STATUS_CODES = {200}
+__all__ = ["AdminSmokeTestCase", "DEFAULT_ALLOWED_STATUS_CODES"]
 
 
 @tag("django_admin_tests")
@@ -38,23 +45,33 @@ class AdminSmokeTestCase(TestCase):
     of those work, that model's change-view check is skipped with an
     ``AdminSmokeWarning`` rather than failing the suite.
 
-    Host projects can customize:
+    Host projects can customize by subclassing:
 
     - ``admin_site``: test a custom ``AdminSite`` instead of the default.
-    - ``allowed_status_codes``: the default allowed status set.
+    - ``allowed_status_codes``: the globally allowed status set.
     - ``model_allowed_status_codes``: per-model overrides, e.g. for admins
       that intentionally deny access (``{MyModel: {403}}``).
+    - ``excluded_models``: models to skip entirely.
     - ``user_factory``: a zero-argument callable returning the user used to
       authenticate requests, for projects with a non-default
       ``AUTH_USER_MODEL``. Defaults to creating a disposable superuser.
 
-    Exclude this test entirely under ``manage.py test`` with
-    ``--exclude-tag=django_admin_tests``.
+    All of the above except ``admin_site`` and ``user_factory`` can also be
+    set in Django settings (``ADMIN_TESTS_ALLOWED_STATUS_CODES``,
+    ``ADMIN_TESTS_MODEL_ALLOWED_STATUS_CODES``, ``ADMIN_TESTS_EXCLUDE``),
+    which is how projects configure the pytest plugin's auto-collected
+    tests without writing any Python. Resolution order is: class attribute
+    if set, then the Django setting, then the built-in default — so the
+    class attributes default to ``None`` rather than to a concrete value.
+
+    Exclude this test entirely with ``--exclude-tag=django_admin_tests``
+    (Django runner) or ``-m "not django_admin_tests"`` (pytest).
     """
 
     admin_site = admin.site
-    allowed_status_codes = DEFAULT_ALLOWED_STATUS_CODES
-    model_allowed_status_codes = {}
+    allowed_status_codes = None
+    model_allowed_status_codes = None
+    excluded_models = None
     user_factory = None
 
     @classmethod
@@ -114,8 +131,34 @@ class AdminSmokeTestCase(TestCase):
         except InstanceBuildError:
             return None
 
+    def _smoke_tested_models(self):
+        """Registered models minus anything excluded by class attr or settings."""
+        excluded_labels = get_excluded_admins()
+        excluded_models = self.excluded_models or ()
+        for model in self.admin_site._registry:
+            if model in excluded_models:
+                continue
+            if model_label(model) in excluded_labels:
+                continue
+            yield model
+
+    def _allowed_status_codes_for(self, model):
+        """Resolve allowed statuses: class attribute, then settings, then default."""
+        class_overrides = self.model_allowed_status_codes or {}
+        if model in class_overrides:
+            return class_overrides[model]
+
+        settings_overrides = get_model_allowed_status_codes()
+        label = model_label(model)
+        if label in settings_overrides:
+            return settings_overrides[label]
+
+        if self.allowed_status_codes is not None:
+            return self.allowed_status_codes
+        return get_allowed_status_codes()
+
     def _assert_allowed_status(self, model, view_name, response):
-        allowed = self.model_allowed_status_codes.get(model, self.allowed_status_codes)
+        allowed = self._allowed_status_codes_for(model)
         self.assertIn(
             response.status_code,
             allowed,
@@ -127,7 +170,7 @@ class AdminSmokeTestCase(TestCase):
 
     def test_admin_smoke_changelist_returns_200(self):
         """Every registered ModelAdmin's changelist view returns an allowed status."""
-        for model in self.admin_site._registry:
+        for model in self._smoke_tested_models():
             with self.subTest(model=model):
                 url = self._reverse_admin_url(model, "changelist")
                 response = self.client.get(url)
@@ -135,7 +178,7 @@ class AdminSmokeTestCase(TestCase):
 
     def test_admin_smoke_add_view_returns_200(self):
         """Every registered ModelAdmin's add view returns an allowed status."""
-        for model in self.admin_site._registry:
+        for model in self._smoke_tested_models():
             with self.subTest(model=model):
                 url = self._reverse_admin_url(model, "add")
                 response = self.client.get(url)
@@ -147,7 +190,7 @@ class AdminSmokeTestCase(TestCase):
         Models for which no instance can be produced are skipped with an
         ``AdminSmokeWarning`` rather than failing.
         """
-        for model in self.admin_site._registry:
+        for model in self._smoke_tested_models():
             with self.subTest(model=model):
                 instance = self._get_change_view_instance(model)
                 if instance is None:

@@ -213,3 +213,48 @@ def test_change_view_instance_resolution_order():
     from_factory = Category.objects.create(name="from-factory")
     register_factory(Category, lambda: from_factory)
     assert case._get_change_view_instance(Category).pk == from_factory.pk
+
+
+@pytest.mark.django_db
+def test_allowed_status_codes_resolution_order():
+    """Class attribute beats Django settings, which beat the built-in default."""
+    case = AdminSmokeTest("test_admin_smoke_changelist_returns_200")
+
+    # AdminSmokeTest sets model_allowed_status_codes for RestrictedItem.
+    assert case._allowed_status_codes_for(RestrictedItem) == {403}
+
+    # No class-level opinion on Category -> built-in default.
+    assert case._allowed_status_codes_for(Category) == {200}
+
+    # Settings fill in where the class is silent...
+    with override_settings(ADMIN_TESTS_ALLOWED_STATUS_CODES=[201]):
+        assert case._allowed_status_codes_for(Category) == {201}
+
+    # ...but a class-level per-model override still wins over settings.
+    with override_settings(
+        ADMIN_TESTS_MODEL_ALLOWED_STATUS_CODES={"testapp.RestrictedItem": [418]}
+    ):
+        assert case._allowed_status_codes_for(RestrictedItem) == {403}
+
+    # Settings per-model override applies where the class is silent.
+    with override_settings(
+        ADMIN_TESTS_MODEL_ALLOWED_STATUS_CODES={"testapp.Category": [418]}
+    ):
+        assert case._allowed_status_codes_for(Category) == {418}
+
+
+@pytest.mark.django_db
+def test_excluded_models_are_not_smoke_tested():
+    """Both the class attribute and the settings-based exclusion drop a model."""
+    case = AdminSmokeTest("test_admin_smoke_changelist_returns_200")
+
+    assert Category in set(case._smoke_tested_models())
+
+    with override_settings(ADMIN_TESTS_EXCLUDE=["testapp.Category"]):
+        assert Category not in set(case._smoke_tested_models())
+
+    class ExcludingSmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
+        excluded_models = {Category}
+
+    excluding_case = ExcludingSmokeTest("test_admin_smoke_changelist_returns_200")
+    assert Category not in set(excluding_case._smoke_tested_models())

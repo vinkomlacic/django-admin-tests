@@ -4,6 +4,9 @@ import pytest
 
 from django_admin_tests.factories import clear_factories
 
+# Needed by tests/test_pytest_plugin.py to run pytest inside pytest.
+pytest_plugins = ["pytester"]
+
 
 @pytest.fixture(autouse=True)
 def _clear_factory_registry():

@@ -47,6 +47,9 @@ ignore = ["E501"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
-markers = [
-    "django_admin_tests: admin smoke tests (django_admin_tests.testcases.AdminSmokeTestCase); pytest-django maps this from django.test.tag",
-]
+# The django_admin_tests marker is registered by our own pytest plugin
+# (django_admin_tests/pytest_plugin.py), so it isn't declared here.
+# Auto-collection stays off for this repo: our testapp deliberately
+# registers a permission-denying admin, which the un-subclassed base class
+# would (correctly) fail on. tests/test_pytest_plugin.py exercises the
+# enabled path in an isolated subprocess instead.

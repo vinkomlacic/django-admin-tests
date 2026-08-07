@@ -27,7 +27,8 @@ the former entirely. Pytest-specific glue belongs only in
 ## Git workflow
 
 One commit per completed work item (see constitution.md for full policy) — don't
-bundle multiple work items into a single commit.
+bundle multiple work items into a single commit. Update `CHANGELOG.md` under
+`[Unreleased]` in that same commit for any user-facing change.
 
 ## Working via FIRE
 

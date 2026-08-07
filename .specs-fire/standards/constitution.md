@@ -7,6 +7,7 @@
 
 - **Commit Style**: Conventional commits (feat:, fix:, chore:, docs:, refactor:, test:)
 - **Commit Granularity**: One commit per completed work item. Commit after tests pass and code review completes (end of run-execute Step 6b), before moving to the next item in a batch/wide run. Scope the subject with the work item id, e.g. `feat(admin-smoke-testcase): implement core smoke test`.
+- **Changelog**: Every commit updates `CHANGELOG.md` under `[Unreleased]` (Keep a Changelog format) in the same commit — not a follow-up commit. Use the matching section (Added/Changed/Fixed/etc.); skip only for changes with no user-facing effect (e.g. internal FIRE planning docs).
 - **Branch Strategy**: Feature branches merged via pull request
 - **Main Branch**: master is always deployable
 

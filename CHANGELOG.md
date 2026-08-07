@@ -29,4 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All tests tagged `django_admin_tests`, so they can be excluded with
   `--exclude-tag=django_admin_tests` or `-m "not django_admin_tests"`.
 
+### Fixed
+
+- CI: pin `pytest-django<4.13` for the Django 4.2 test matrix cells.
+  pytest-django 4.13 dropped Django 4.2 support and raises
+  `AttributeError: _pre_setup_ran_eagerly` at test setup when paired with
+  it.
+
 [Unreleased]: https://github.com/vinkomlacic/django-admin-tests/commits/master

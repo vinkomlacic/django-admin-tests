@@ -100,6 +100,13 @@ jobs:
         run: |
           pip install -e ".[dev]"
           pip install "django==${{ matrix.django-version }}.*"
+          # pytest-django 4.13 dropped Django 4.2 support: its _django_db_helper
+          # fixture unconditionally reads TestCase._pre_setup_ran_eagerly, which
+          # Django only added in 5.2+, so pairing it with 4.2 raises AttributeError.
+          # Pin to the last release that still supports 4.2 for that cell.
+          if [ "${{ matrix.django-version }}" = "4.2" ]; then
+            pip install "pytest-django<4.13"
+          fi
 
       - name: Show resolved versions
         run: python -c "import sys, django; print(sys.version); print('Django', django.__version__)"

@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `django_admin_tests_auto = true`.
 - All tests tagged `django_admin_tests`, so they can be excluded with
   `--exclude-tag=django_admin_tests` or `-m "not django_admin_tests"`.
+- Tag-triggered release pipeline (`.github/workflows/release.yml`): builds
+  the sdist/wheel, publishes to PyPI via Trusted Publishing, and creates a
+  GitHub Release from the matching CHANGELOG section. The package version
+  is now derived from git tags via `hatch-vcs` (bare, e.g. `0.1.0` — no
+  `v` prefix) instead of being hand-edited in `pyproject.toml`.
 
 ### Fixed
 

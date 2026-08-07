@@ -87,7 +87,13 @@ Not configured.
 
 ### Build Tool
 
-**Tool**: hatchling (or setuptools) — packages this repo for PyPI distribution and declares the optional `pytest11` entry point
+**Tool**: hatchling — packages this repo for PyPI distribution and declares the optional `pytest11` entry point
+**Versioning**: `hatch-vcs` — the package version is derived from git tags (bare, e.g. `0.1.0`, no `v` prefix), not hand-edited in `pyproject.toml`
+
+### Release Process
+
+**Trigger**: pushing a bare-semver git tag (e.g. `0.1.0`)
+**Pipeline**: `.github/workflows/release.yml` builds the sdist/wheel, publishes to PyPI via Trusted Publishing (OIDC — no stored API token), and creates a GitHub Release using the matching `CHANGELOG.md` section as its notes. See README's "Releasing" section for the step-by-step.
 
 ### Linting
 

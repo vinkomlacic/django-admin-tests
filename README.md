@@ -163,6 +163,19 @@ class AdminSmokeTest(AdminSmokeTestCase):
 - Many-to-many fields aren't populated (they aren't needed for the views to
   render).
 
+## Releasing
+
+Versions are derived from git tags via `hatch-vcs` — nothing to bump in
+`pyproject.toml`. To cut a release:
+
+1. In `CHANGELOG.md`, retitle `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`
+   and add a fresh empty `## [Unreleased]` section above it.
+2. Commit that change, then tag the commit with the bare version — **no
+   `v` prefix** — and push both: `git tag X.Y.Z && git push origin master --tags`.
+3. Pushing the tag triggers `.github/workflows/release.yml`, which builds
+   the sdist/wheel, publishes to PyPI (via Trusted Publishing), and creates
+   a GitHub Release using that CHANGELOG section as its notes.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

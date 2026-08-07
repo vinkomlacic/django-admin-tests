@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "django-admin-tests"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 description = "Automatic admin smoke-test coverage for Django projects."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,6 +41,16 @@ dev = ["pytest", "pytest-django", "ruff", "coverage", "build", "twine"]
 
 [project.entry-points.pytest11]
 django_admin_tests = "django_admin_tests.pytest_plugin"
+
+[tool.hatch.version]
+source = "vcs"
+# No local (dev-repo) history has tags yet; without this, an untagged
+# checkout (fresh clone, shallow CI checkout) fails to build entirely.
+fallback-version = "0.0.0"
+
+[tool.hatch.version.raw-options]
+# Tags are the bare version, e.g. "0.1.0" — no "v" prefix.
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.wheel]
 packages = ["django_admin_tests"]

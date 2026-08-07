@@ -103,7 +103,7 @@ manage.py test / pytest ─▶ AdminSmokeTestCase ─▶ admin.site._registry �
 | pytest support | pytest-django (consumer) + optional `pytest11` plugin (this package) | One-line import always works; plugin adds auto-discovery |
 | Data | SQLite (this repo's own dev/CI); host project's DB in real usage | Fast local iteration on this library |
 | CI | GitHub Actions | Matrix over Python × Django × runner (native/pytest) |
-| Packaging | pyproject.toml + hatchling/setuptools | PyPI distribution, entry-point declaration |
+| Packaging | pyproject.toml + hatchling + hatch-vcs | PyPI distribution, entry-point declaration, git-tag-derived version |
 
 ## Non-Functional Requirements
 

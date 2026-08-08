@@ -7,7 +7,8 @@
 
 - **Commit Style**: Conventional commits (feat:, fix:, chore:, docs:, refactor:, test:)
 - **Commit Granularity**: One commit per completed work item. Commit after tests pass and code review completes (end of run-execute Step 6b), before moving to the next item in a batch/wide run. Scope the subject with the work item id, e.g. `feat(admin-smoke-testcase): implement core smoke test`.
-- **Changelog**: Every commit updates `CHANGELOG.md` under `[Unreleased]` (Keep a Changelog format) in the same commit — not a follow-up commit. Use the matching section (Added/Changed/Fixed/etc.); skip only for changes with no user-facing effect (e.g. internal FIRE planning docs).
+- **Changelog**: Every commit updates `CHANGELOG.md` under `[Unreleased]` (Keep a Changelog format) in the same commit — not a follow-up commit. Use the matching section (Added/Changed/Fixed/etc.).
+- **Changelog scope**: entries document only what's visible to a *user of the package* — public API additions/changes/removals, new configuration options, behavior changes, bug fixes a user could have observed. Do **not** add entries for CI configuration, test matrix pins, release/publishing pipeline changes, internal refactors, FIRE planning docs, or other process/tooling work that doesn't change what the package does or how it's used. If a commit has no user-visible effect, skip the changelog entirely — this applies to specsmd-fire skills (Planner, Builder) and any coding agent working in this repo.
 - **Branch Strategy**: Feature branches merged via pull request
 - **Main Branch**: master is always deployable
 

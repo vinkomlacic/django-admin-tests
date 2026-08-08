@@ -14,7 +14,7 @@ from django_admin_tests import testcases as admin_smoke_testcases
 from django_admin_tests.factories import register_factory
 from django_admin_tests.instantiation import AdminSmokeWarning
 from tests.custom_admin_site_urls import custom_admin_site
-from testapp.models import Category, RestrictedItem, SelfReferentialItem
+from testapp.models import Category, RestrictedItem, SelfReferentialItem, SluggedArticle
 
 
 class AdminSmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
@@ -79,6 +79,49 @@ def test_admin_smoke_testcase_detects_broken_admin_view():
             AdminSmokeTest.tearDownClass()
     finally:
         category_admin.__class__.get_queryset = original_get_queryset
+
+
+@pytest.mark.django_db
+def test_admin_smoke_reports_fieldset_keyerror_clearly():
+    """A field named in `fieldsets` but missing from the ModelForm fails
+    clearly, not with a bare KeyError (GitHub issue #1).
+
+    SluggedArticle.slug is required at the DB level but populated in
+    save(), so SluggedArticleAdmin excludes it from the form — that alone
+    is valid (see AdminSmokeTest, which smoke-tests it clean). Temporarily
+    adding a `fieldsets` entry that still names the excluded field is a
+    ModelAdmin misconfiguration Django's own system checks don't catch
+    (readonly_fields is where you're supposed to list it instead); it only
+    surfaces as `KeyError: "Key 'slug' not found in ..."` when the form is
+    actually rendered. AdminSmokeTestCase must translate that into a
+    failure naming the model, per coding-standards.md's precedent for
+    NoReverseMatch.
+    """
+    slugged_admin = admin.site._registry[SluggedArticle]
+    original_fieldsets = slugged_admin.__class__.fieldsets
+    slugged_admin.__class__.fieldsets = ((None, {"fields": ("name", "slug")}),)
+
+    class SluggedOnlySmokeTest(admin_smoke_testcases.AdminSmokeTestCase):
+        excluded_models = {
+            model for model in admin.site._registry if model is not SluggedArticle
+        }
+
+    try:
+        SluggedOnlySmokeTest.setUpClass()
+        try:
+            case = SluggedOnlySmokeTest("test_admin_smoke_add_view_returns_200")
+            result = unittest.TestResult()
+            case(result)
+
+            assert not result.wasSuccessful()
+            assert result.errors == [], result.errors
+            reported = "".join(traceback for _, traceback in result.failures)
+            assert "SluggedArticle add view raised" in reported, reported
+            assert "readonly_fields" in reported, reported
+        finally:
+            SluggedOnlySmokeTest.tearDownClass()
+    finally:
+        slugged_admin.__class__.fieldsets = original_fieldsets
 
 
 @pytest.mark.django_db

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 
 
 class Category(models.Model):
@@ -53,6 +54,28 @@ class SelfReferentialItem(models.Model):
     parent = models.ForeignKey(
         "self", on_delete=models.CASCADE, related_name="children"
     )
+
+    def __str__(self):
+        return self.name
+
+
+class SluggedArticle(models.Model):
+    """Required field populated in ``save()``, not via a Django field default.
+
+    ``slug`` is NOT NULL with no ``default=``, so it looks auto-buildable —
+    but the admin excludes it from the form entirely (it's derived from
+    ``name`` and never meant to be hand-edited), which is the scenario from
+    GitHub issue #1: a field genuinely required at the DB level that never
+    appears in the ``ModelForm``'s fields.
+    """
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

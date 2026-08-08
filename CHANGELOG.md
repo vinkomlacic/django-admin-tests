@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `AdminSmokeTestCase`: a `ModelAdmin` field referenced in `fields`/
+  `fieldsets` but missing from the rendered `ModelForm` (e.g. excluded,
+  non-editable, or a `save()`-populated field left out of
+  `readonly_fields`) now fails with a clear message naming the model,
+  instead of a bare `KeyError` (#1).
+
 ### Changed
 
 - Docs site: added a "Better than nothing" line to the tagline.

@@ -6,6 +6,7 @@ from testapp.models import (
     Product,
     RestrictedItem,
     SelfReferentialItem,
+    SluggedArticle,
 )
 
 
@@ -57,3 +58,19 @@ class RestrictedItemAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(SluggedArticle)
+class SluggedArticleAdmin(admin.ModelAdmin):
+    """``slug`` is required at the DB level but excluded from the form —
+    it's derived from ``name`` in ``save()``, so there's nothing for a user
+    to fill in. Exercises the required-but-not-in-the-form scenario from
+    issue #1: this alone is valid and must smoke-test clean. See
+    ``tests/test_admin_smoke.py::test_admin_smoke_reports_fieldset_keyerror_clearly``
+    for the *misconfigured* variant (field also referenced in ``fieldsets``
+    without ``readonly_fields``), which is a genuine Django admin bug this
+    tool must surface with a clear message, not a bare ``KeyError``.
+    """
+
+    list_display = ("name", "slug")
+    exclude = ("slug",)

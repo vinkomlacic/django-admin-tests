@@ -108,6 +108,28 @@ class AdminSmokeTestCase(TestCase):
         except NoReverseMatch as exc:
             self.fail(f"Could not resolve {view_name} URL for {model.__name__}: {exc}")
 
+    def _get_admin_view(self, model, view_name, url):
+        """GET ``url``, turning a form-field ``KeyError`` into a clear failure.
+
+        A field named in ``ModelAdmin.fields``/``fieldsets`` but absent from
+        the actual rendered ``ModelForm`` — commonly because it's excluded,
+        non-editable, or a value the model's own ``save()`` populates and
+        the ``ModelAdmin`` forgot to also list in ``readonly_fields`` — isn't
+        caught by Django's system checks. It only surfaces as a bare
+        ``KeyError`` when the admin form is rendered, which would otherwise
+        show up as an opaque traceback instead of naming the model.
+        """
+        try:
+            return self.client.get(url)
+        except KeyError as exc:
+            self.fail(
+                f"{model.__name__} {view_name} view raised {exc!r} while "
+                f"rendering the admin form. This is commonly caused by a "
+                f"field listed in `fields`/`fieldsets` that isn't in the "
+                f"ModelForm (e.g. excluded, non-editable, or missing from "
+                f"`readonly_fields`) — check {model.__name__}'s ModelAdmin."
+            )
+
     def _get_change_view_instance(self, model):
         """Resolve an instance to exercise ``model``'s change view.
 
@@ -173,7 +195,7 @@ class AdminSmokeTestCase(TestCase):
         for model in self._smoke_tested_models():
             with self.subTest(model=model):
                 url = self._reverse_admin_url(model, "changelist")
-                response = self.client.get(url)
+                response = self._get_admin_view(model, "changelist", url)
                 self._assert_allowed_status(model, "changelist", response)
 
     def test_admin_smoke_add_view_returns_200(self):
@@ -181,7 +203,7 @@ class AdminSmokeTestCase(TestCase):
         for model in self._smoke_tested_models():
             with self.subTest(model=model):
                 url = self._reverse_admin_url(model, "add")
-                response = self.client.get(url)
+                response = self._get_admin_view(model, "add", url)
                 self._assert_allowed_status(model, "add", response)
 
     def test_admin_smoke_change_view_returns_200(self):
@@ -203,5 +225,5 @@ class AdminSmokeTestCase(TestCase):
                     warnings.warn(message, AdminSmokeWarning, stacklevel=2)
                     self.skipTest(message)
                 url = self._reverse_admin_url(model, "change", args=[instance.pk])
-                response = self.client.get(url)
+                response = self._get_admin_view(model, "change", url)
                 self._assert_allowed_status(model, "change", response)

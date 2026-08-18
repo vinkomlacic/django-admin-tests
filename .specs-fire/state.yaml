@@ -85,53 +85,31 @@ intents:
     work_items:
       - id: generated-test-methods
         title: Generate one test method per (model, view) pair
-        status: pending
+        status: completed
         complexity: high
         mode: validate
+        run_id: run-django-admin-tests-008
+        completed_at: 2026-08-18T20:40:53.069Z
       - id: runner-compat-verification
         title: Verify generated methods across every supported runner path
-        status: pending
+        status: completed
         complexity: medium
         mode: confirm
         depends_on:
           - generated-test-methods
+        run_id: run-django-admin-tests-008
+        completed_at: 2026-08-18T20:40:53.069Z
       - id: docs-and-changelog
         title: Update docs and changelog for the new method names
-        status: pending
+        status: completed
         complexity: low
         mode: autopilot
         depends_on:
           - generated-test-methods
+        run_id: run-django-admin-tests-008
+        completed_at: 2026-08-18T20:40:53.069Z
 runs:
-  active:
-    - id: run-django-admin-tests-008
-      scope: wide
-      work_items:
-        - id: generated-test-methods
-          intent: per-model-test-methods
-          mode: validate
-          status: completed
-          current_phase: review
-          checkpoint_state: approved
-          current_checkpoint: plan
-          completed_at: 2026-08-18T20:32:51.422Z
-        - id: runner-compat-verification
-          intent: per-model-test-methods
-          mode: confirm
-          status: completed
-          current_phase: review
-          checkpoint_state: approved
-          current_checkpoint: plan
-          completed_at: 2026-08-18T20:38:02.059Z
-        - id: docs-and-changelog
-          intent: per-model-test-methods
-          mode: autopilot
-          status: in_progress
-          current_phase: review
-          checkpoint_state: none
-          current_checkpoint: null
-      current_item: docs-and-changelog
-      started: 2026-08-18T20:19:29.139Z
+  active: []
   completed:
     - id: run-django-admin-tests-001
       scope: single
@@ -189,3 +167,17 @@ runs:
           mode: autopilot
       started: 2026-08-06T22:13:53.319Z
       completed: 2026-08-06T22:21:53.648Z
+    - id: run-django-admin-tests-008
+      scope: wide
+      work_items:
+        - id: generated-test-methods
+          intent: per-model-test-methods
+          mode: validate
+        - id: runner-compat-verification
+          intent: per-model-test-methods
+          mode: confirm
+        - id: docs-and-changelog
+          intent: per-model-test-methods
+          mode: autopilot
+      started: 2026-08-18T20:19:29.139Z
+      completed: 2026-08-18T20:40:53.069Z

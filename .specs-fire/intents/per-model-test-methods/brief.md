@@ -1,8 +1,9 @@
 ---
 id: per-model-test-methods
 title: Per-Model Generated Test Methods (replace subTest)
-status: pending
+status: completed
 created: 2026-08-18T20:10:26Z
+completed_at: 2026-08-18T20:40:53.082Z
 ---
 
 # Intent: Per-Model Generated Test Methods (replace subTest)

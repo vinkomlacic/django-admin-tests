@@ -4,10 +4,12 @@ title: Update docs and changelog for the new method names
 intent: per-model-test-methods
 complexity: low
 mode: autopilot
-status: in_progress
+status: completed
 depends_on:
   - generated-test-methods
 created: 2026-08-18T20:12:19Z
+run_id: run-django-admin-tests-008
+completed_at: 2026-08-18T20:40:53.069Z
 ---
 
 # Work Item: Update docs and changelog for the new method names

@@ -4,8 +4,9 @@ title: Verify generated methods across every supported runner path
 intent: per-model-test-methods
 complexity: medium
 mode: confirm
-status: pending
-depends_on: [generated-test-methods]
+status: in_progress
+depends_on:
+  - generated-test-methods
 created: 2026-08-18T20:12:19Z
 ---
 

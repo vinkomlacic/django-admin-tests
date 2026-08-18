@@ -1,7 +1,7 @@
 ---
 id: per-model-test-methods
 title: Per-Model Generated Test Methods (replace subTest)
-status: in_progress
+status: pending
 created: 2026-08-18T20:10:26Z
 ---
 

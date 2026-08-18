@@ -4,9 +4,11 @@ title: Generate one test method per (model, view) pair
 intent: per-model-test-methods
 complexity: high
 mode: validate
-status: pending
+status: completed
 depends_on: []
 created: 2026-08-18T20:12:19Z
+run_id: run-django-admin-tests-008
+completed_at: 2026-08-18T20:32:51.422Z
 ---
 
 # Work Item: Generate one test method per (model, view) pair

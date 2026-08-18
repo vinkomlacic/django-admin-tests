@@ -130,6 +130,35 @@ def test_host_authored_test_methods_are_never_shadowed():
     assert "test_host_authored_check" in _collected(HostSmokeTest)
 
 
+def test_generated_method_is_addressable_by_node_id():
+    """A single model's check can be re-run on its own.
+
+    loadTestsFromName is the mechanism behind
+    `manage.py test path.to.Class.method`, so this guards the selection path
+    without shelling out to a second runner.
+    """
+    suite = unittest.TestLoader().loadTestsFromName(
+        f"tests.test_admin_smoke.AdminSmokeTest.{PRODUCT_CHANGELIST}"
+    )
+
+    assert suite.countTestCases() == 1
+
+
+def test_model_substring_selects_exactly_that_models_tests():
+    """`pytest -k testapp_product` granularity, which is plain substring matching.
+
+    Guards the app/model adjacency in the name: if the two ever stopped being
+    neighbours, -k on a model would silently stop being selective.
+    """
+    matching = {
+        name for name in _collected(AdminSmokeTest) if "testapp_product" in name
+    }
+
+    assert matching == {
+        f"test_admin_smoke_testapp_product_{view}" for view in VIEW_NAMES
+    }
+
+
 def test_explicitly_defined_method_wins_over_the_generated_one():
     """A host overriding one model's check keeps their own implementation.
 

@@ -149,3 +149,77 @@ Reference: `.specs-fire/intents/per-model-test-methods/work-items/generated-test
 
 ---
 *Plan approved at checkpoint. Execution follows.*
+
+---
+
+## Work Item: runner-compat-verification
+
+### Pre-plan investigation (already run, not assumed)
+
+| Path | Result |
+|------|--------|
+| pytest plugin auto-collection | ✅ Works — host project gets 15 injected tests (13 passed, 3 skipped), no host imports |
+| `manage.py test` node-ID selection | ✅ Works — `tests.test_admin_smoke.AdminSmokeTest.test_admin_smoke_testapp_product_changelist` runs 1 test |
+| `pytest -k <app>_<model>` | ✅ Works — `-k testapp_product` selects exactly 3, deselects 108 |
+| Django `--parallel` | ❌ **Does not distribute per method** — see below |
+| pytest-xdist | ⚠️ Unverified — not installed, not in dev deps |
+
+### Finding: Django's `--parallel` gives no benefit here
+
+`DiscoverRunner.build_suite` partitions with `partition_suite_by_case`, which is
+`groupby(all_tests, type)` — it groups by **TestCase class**, not by test method:
+
+```python
+subsuites = partition_suite_by_case(suite)
+processes = min(self.parallel, len(subsuites))
+if processes > 1:
+    suite = self.parallel_test_suite(...)
+```
+
+All generated methods live on a single class, so `len(subsuites) == 1`,
+`processes = min(4, 1) = 1`, and the run silently proceeds serially.
+`manage.py test tests --parallel 4` reports `Ran 24 tests ... OK` while using one
+process.
+
+This does not break anything — it means motivation #3 from the intent brief is
+delivered for pytest-xdist (which distributes per collected *item*) but **not**
+for Django's native runner. Getting Django-side parallelism would require one
+TestCase *class* per model, a materially different design from the one approved.
+
+### Scope decision (user, at checkpoint)
+
+**Parallelism is dropped from this work item** — the user classified it as
+nice-to-have rather than a requirement. No pytest-xdist dependency, no CI
+parallel cell, no test asserting the partitioning behavior.
+
+Two consequences carried into `docs-and-changelog`:
+
+- The `[Unreleased]` CHANGELOG entry written in the previous work item claims
+  the per-model tests "distribute across parallel workers". That is true for
+  pytest-xdist but **not** for `manage.py test --parallel`. The wording must be
+  corrected so the package doesn't advertise a benefit its own native runner
+  doesn't deliver.
+- README should not claim parallel distribution either.
+
+### Approach
+
+Verification only — no production code changes expected.
+
+1. Lock in the three verified paths as regression tests, so they can't silently
+   break later.
+2. Confirm a generation error inside the plugin isn't downgraded to a warning
+   (flagged in the design doc's risk table).
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `tests/test_pytest_plugin.py` | Assert a generation-time `ImproperlyConfigured` surfaces rather than being swallowed by the collection `try/except` |
+| `tests/test_admin_smoke.py` | Selection regression tests: node-ID addressability, `-k` substring granularity |
+
+### Tests
+
+| Test File | Coverage |
+|-----------|----------|
+| `tests/test_admin_smoke.py` | One generated method is individually addressable by node ID; `-k <app>_<model>` selects exactly that model's three tests |
+| `tests/test_pytest_plugin.py` | Generated names collected under auto-collection; collision error not silently swallowed |

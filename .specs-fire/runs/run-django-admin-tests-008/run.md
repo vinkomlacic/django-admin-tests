@@ -5,17 +5,17 @@ work_items:
   - id: generated-test-methods
     intent: per-model-test-methods
     mode: validate
-    status: in_progress
-    current_phase: plan
-    checkpoint_state: none
+    status: completed
+    current_phase: review
+    checkpoint_state: approved
     current_checkpoint: plan
   - id: runner-compat-verification
     intent: per-model-test-methods
     mode: confirm
-    status: pending
-    current_phase: null
+    status: in_progress
+    current_phase: plan
     checkpoint_state: none
-    current_checkpoint: null
+    current_checkpoint: plan
   - id: docs-and-changelog
     intent: per-model-test-methods
     mode: autopilot
@@ -23,7 +23,7 @@ work_items:
     current_phase: null
     checkpoint_state: none
     current_checkpoint: null
-current_item: generated-test-methods
+current_item: runner-compat-verification
 status: in_progress
 started: 2026-08-18T20:19:29.139Z
 completed: null
@@ -35,12 +35,13 @@ completed: null
 wide (3 work items)
 
 ## Work Items
-1. **generated-test-methods** (validate) — in_progress
-2. **runner-compat-verification** (confirm) — pending
+1. **generated-test-methods** (validate) — completed
+2. **runner-compat-verification** (confirm) — in_progress
 3. **docs-and-changelog** (autopilot) — pending
 
+
 ## Current Item
-generated-test-methods (validate)
+runner-compat-verification (confirm)
 
 ## Files Created
 (none yet)

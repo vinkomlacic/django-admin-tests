@@ -1,6 +1,7 @@
 """Tests for the optional pytest11 auto-discovery plugin."""
 
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from django_admin_tests import pytest_plugin
 
@@ -206,6 +207,38 @@ def test_collection_failure_warns_instead_of_propagating(monkeypatch, recwarn):
         raise RuntimeError("collection exploded")
 
     monkeypatch.setattr(pytest_plugin, "_collect_smoke_items", boom)
+
+    class Config:
+        @staticmethod
+        def getini(name):
+            return True
+
+    items = ["existing-item"]
+    pytest_plugin.pytest_collection_modifyitems(
+        session=None, config=Config(), items=items
+    )
+
+    assert items == ["existing-item"], "host items must be left intact"
+    assert any("could not auto-collect" in str(w.message) for w in recwarn)
+
+
+def test_generation_error_warns_instead_of_aborting_collection(monkeypatch, recwarn):
+    """A method-generation misconfiguration must not take down the host's session.
+
+    The metaclass raises ImproperlyConfigured at import time when two models
+    would generate the same method name. That import happens inside this
+    plugin's collection hook, so the error lands in the same broad except as
+    any other collection failure: the host keeps its own tests and the problem
+    surfaces as a warning rather than an aborted run.
+
+    The trade-off is deliberate but worth knowing: a host that hits a collision
+    gets *no* smoke tests, and only a warning says so.
+    """
+
+    def boom():
+        raise ImproperlyConfigured("two models map to the same test name")
+
+    monkeypatch.setattr(pytest_plugin, "_smoke_module_path", boom)
 
     class Config:
         @staticmethod

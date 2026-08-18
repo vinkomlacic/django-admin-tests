@@ -81,7 +81,8 @@ intents:
         completed_at: 2026-08-06T22:21:53.648Z
   - id: per-model-test-methods
     title: Per-Model Generated Test Methods (replace subTest)
-    status: in_progress
+    status: completed
+    completed_at: 2026-08-18T20:40:53.082Z
     work_items:
       - id: generated-test-methods
         title: Generate one test method per (model, view) pair

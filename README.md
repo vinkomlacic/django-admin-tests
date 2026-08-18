@@ -40,34 +40,33 @@ There are two ways in. Both run under either test runner.
 Put this in any test module your runner already collects:
 
 ```python
-from django_admin_tests.testcases import AdminSmokeTestCase
+from django_admin_tests import testcases
 
 
-class AdminSmokeTest(AdminSmokeTestCase):
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
     pass
 ```
 
 That's it. Subclassing is also how you customize behavior:
 
 ```python
-from django_admin_tests.testcases import AdminSmokeTestCase
+from django_admin_tests import testcases
 
 from myapp.models import InternalReport, LegacyThing
 
 
-class AdminSmokeTest(AdminSmokeTestCase):
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
     # Admins that intentionally deny access:
     model_allowed_status_codes = {InternalReport: {403}}
     # Admins to skip entirely:
     excluded_models = {LegacyThing}
 ```
 
-> **Note:** import the *module*, not the class, if you'd rather the base
-> class not be collected as a test in its own right. Test discovery scans
-> the whole module namespace for `TestCase` subclasses, so
-> `from django_admin_tests.testcases import AdminSmokeTestCase` makes the
-> un-customized base class run too. `from django_admin_tests import
-> testcases` and then `testcases.AdminSmokeTestCase` avoids that.
+> **Note:** the examples import the *module* on purpose. Test discovery
+> scans the whole module namespace for `TestCase` subclasses, so
+> `from django_admin_tests.testcases import AdminSmokeTestCase` collects the
+> un-customized base class as a test of its own, alongside your subclass.
+> Going through `testcases.AdminSmokeTestCase` avoids that.
 
 ### Option 2 — pytest plugin (no test file needed)
 
@@ -171,7 +170,7 @@ default `User` fields. If your `AUTH_USER_MODEL` needs something else,
 supply a factory:
 
 ```python
-class AdminSmokeTest(AdminSmokeTestCase):
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
     user_factory = staticmethod(my_superuser_factory)
 ```
 
@@ -181,7 +180,7 @@ class AdminSmokeTest(AdminSmokeTestCase):
 from myproject.admin import my_site
 
 
-class AdminSmokeTest(AdminSmokeTestCase):
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
     admin_site = my_site
 ```
 

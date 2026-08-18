@@ -211,10 +211,10 @@
 <section id="quickstart">
   <h2>Quickstart</h2>
   <p>Put this in any test module your runner already collects:</p>
-<pre><code>from django_admin_tests.testcases import AdminSmokeTestCase
+<pre><code>from django_admin_tests import testcases
 
 
-class AdminSmokeTest(AdminSmokeTestCase):
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
     pass</code></pre>
   <p>That's the whole setup. Run your tests as usual:</p>
 <pre><code>pytest
@@ -223,15 +223,15 @@ python manage.py test</code></pre>
 
   <div class="note">
     <p>
-      <strong>Import the module, not the class,</strong> if you'd rather the base class
-      not run as a test in its own right. Test discovery scans the whole module namespace
-      for <code>TestCase</code> subclasses, so importing the name directly makes the
-      un-customized base class run too:
+      <strong>The examples import the module, not the class,</strong> on purpose. Test
+      discovery scans the whole module namespace for <code>TestCase</code> subclasses, so
+      importing the name directly collects the un-customized base class as a test of its
+      own, alongside your subclass:
     </p>
-<pre><code>from django_admin_tests import testcases
+<pre><code>from django_admin_tests.testcases import AdminSmokeTestCase  # base class runs too
 
 
-class AdminSmokeTest(testcases.AdminSmokeTestCase):
+class AdminSmokeTest(AdminSmokeTestCase):
     pass</code></pre>
   </div>
 

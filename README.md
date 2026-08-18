@@ -120,8 +120,9 @@ generated name — yours wins, and the generated one isn't installed:
 
 ```python
 class AdminSmokeTest(testcases.AdminSmokeTestCase):
-    def test_admin_smoke_shop_product_changelist(self):
-        ...  # your own assertions for this one admin
+    def test_admin_smoke_shop_product_changelist(
+        self,
+    ): ...  # your own assertions for this one admin
 ```
 
 ## Change views need an object

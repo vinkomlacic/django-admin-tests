@@ -12,6 +12,17 @@ asserted to return `200` — as part of *your* test run, under either
 `list_display`, a `get_queryset` that blows up on a related lookup, a
 permission tweak. This catches that without you writing a test per model.
 
+You get one test method per model and view, named after the model, so a
+broken admin fails under its own name rather than inside a shared loop:
+
+```
+test_admin_smoke_shop_product_changelist
+test_admin_smoke_shop_product_add
+test_admin_smoke_shop_product_change
+test_admin_smoke_blog_article_changelist
+...
+```
+
 ## Install
 
 ```bash
@@ -90,6 +101,29 @@ ADMIN_TESTS_EXCLUDE = ["myapp.LegacyThing"]
 Resolution order is **class attribute → Django setting → built-in
 default**, so a subclass always wins over settings.
 
+Excluded models keep their test methods and report as **skipped**, so an
+opt-out stays visible in your output rather than looking like a model that
+was never covered.
+
+## Running one model's tests
+
+Because each model gets its own methods, you can iterate on a single admin
+without re-running the rest:
+
+```bash
+pytest -k shop_product
+python manage.py test myapp.tests.AdminSmokeTest.test_admin_smoke_shop_product_changelist
+```
+
+You can also override a single model's check by defining a method with the
+generated name — yours wins, and the generated one isn't installed:
+
+```python
+class AdminSmokeTest(testcases.AdminSmokeTestCase):
+    def test_admin_smoke_shop_product_changelist(self):
+        ...  # your own assertions for this one admin
+```
+
 ## Change views need an object
 
 To load a change view, there has to be something to change. An instance is
@@ -162,6 +196,16 @@ class AdminSmokeTest(AdminSmokeTestCase):
   no auto-detection of required fields.
 - Many-to-many fields aren't populated (they aren't needed for the views to
   render).
+- The admin registry is read when the test class is created, so admins
+  registered after that aren't covered. In practice registration happens
+  during app loading, which always precedes test module import.
+- `manage.py test --parallel` won't spread these across processes. Django
+  distributes work per `TestCase` *class*, and all the generated methods
+  live on one class, so the run stays single-process.
+- Two models whose app label and model name differ only in where the
+  underscore falls (`foo_bar.baz` vs `foo.bar_baz`) would generate the same
+  method name. That raises `ImproperlyConfigured` rather than silently
+  dropping one — exclude one of them to proceed.
 
 ## Releasing
 

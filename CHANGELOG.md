@@ -14,9 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   admin registry with `subTest`. Methods are named
   `test_admin_smoke_<app_label>_<model_name>_<view>`, e.g.
   `test_admin_smoke_shop_product_changelist`. A broken admin now fails
-  under its own name, individual models can be re-run with
-  `pytest -k shop_product`, and the per-model tests distribute across
-  parallel workers.
+  under its own name, and an individual model can be re-run with
+  `pytest -k shop_product` or by node ID under `manage.py test`.
 
   The three previous method names —
   `test_admin_smoke_changelist_returns_200`,

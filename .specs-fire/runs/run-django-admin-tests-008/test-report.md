@@ -173,3 +173,54 @@ runner, and unverified for xdist.
 |-------|----------|--------|
 | CHANGELOG overstates parallel distribution | Medium | Open — assigned to `docs-and-changelog` |
 | A name collision yields zero smoke tests plus a warning under the pytest plugin | Low | Documented by test; behavior matches the plugin's existing "never abort the host's run" philosophy. Not changed |
+
+---
+
+## Work Item: docs-and-changelog
+
+### Test Results
+
+- Passed: 113 (pytest), 23 (Django runner)
+- Failed: 0
+- Skipped: 1
+
+Documentation-only work item — no code changed, so the suite is unchanged.
+Verification here is that the *documented commands* actually work and that no
+stale references survive.
+
+### Acceptance Criteria Validation
+
+- ✅ **CHANGELOG documents the removal as a breaking change** — `[Unreleased]` names all three removed methods, the new scheme, the node-ID migration note, and the rise in reported test counts
+- ✅ **CHANGELOG no longer overstates parallelism** — the "distribute across parallel workers" claim was corrected to node-ID / `-k` selection, which is what actually holds
+- ✅ **README reflects per-model tests** — new naming block near the top, a "Running one model's tests" section, and the single-model override documented
+- ✅ **README documents individual selectability** — both `pytest -k` and the `manage.py test` node-ID form
+- ✅ **README no longer promises 200 where configurable** — exclusions documented as *skips*, and the four new limitations spell out the actual guarantees
+- ✅ **`coding-standards.md:39` naming example updated** — plus a second row for the generated-method pattern
+- ✅ **`coding-standards.md` "Per-admin subtests" preferred pattern replaced** — now "One generated test method per admin", with the reason `subTest` was dropped
+- ✅ **`coding-standards.md` Error Handling example updated** — the loop-based sample replaced with the generator, noting the test *name* carries the model too
+- ✅ **`testing-standards.md:42` example updated** — and the shipped-code pattern documented separately from this repo's own conventions
+- ✅ **`testing-standards.md` illustrative code block updated** — shows the metaclass, including why not `__init_subclass__`
+- ✅ **`system-architecture.md` updated** — component purpose/responsibilities and the data-flow steps now describe generation at class-creation time with runtime exclusion
+- ✅ **No stale references outside historical records** — remaining matches are the CHANGELOG naming what it removed and coding-standards explaining why `subTest` is gone, both intentional
+
+### Beyond the original scope
+
+Three things were folded in that the work item didn't originally list, because
+they were discovered during the earlier items:
+
+1. `coding-standards.md`'s "Per-admin subtests" **Preferred Pattern** and its
+   Error Handling example — both actively recommended the approach this intent
+   removed.
+2. The CHANGELOG parallelism correction.
+3. `testing-standards.md`'s documented test command
+   (`python -m django test --settings=tests.settings`), which **fails**: Django's
+   `test*.py` discovery matches `django_admin_tests/testcases.py` and runs the
+   un-subclassed base class against `testapp`'s permission-denying admin. Now
+   documents the scoped `python manage.py test tests` that CI actually uses,
+   with a comment explaining why scoping matters. Pre-existing bug on master,
+   fixed here since the file was being touched anyway — and verified to work.
+
+### Issues Found
+
+No open issues. The two carried in from earlier items are resolved: the
+CHANGELOG parallel claim is corrected, and the stale test command is fixed.

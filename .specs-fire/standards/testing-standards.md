@@ -39,9 +39,14 @@ Never mix the two: code under `django_admin_tests/` (shipped) must not depend on
 **Pattern**: `test_<subject>_<behavior>`
 
 **Examples**:
-- `test_admin_smoke_changelist_returns_200` — verifies the core smoke-test behavior
+- `test_one_method_is_generated_per_model_and_view` — verifies the core smoke-test behavior
 - `test_pytest_plugin_discovers_without_import` — verifies zero-config discovery under pytest
 - `test_manage_py_test_runs_shipped_testcase` — verifies the native-runner path works with only a one-line import
+
+The *generated* methods shipped to consumers follow a separate pattern —
+`test_admin_smoke_<app_label>_<model_name>_<view>`, e.g.
+`test_admin_smoke_testapp_product_changelist` — since their names are built
+at runtime from the admin registry rather than written by hand.
 
 ## Test Structure
 
@@ -50,18 +55,25 @@ Shipped code (`django_admin_tests/testcases.py`) — plain Django `TestCase`, no
 ```python
 from django.contrib import admin
 from django.test import TestCase
-from django.urls import reverse
 
 
-class AdminSmokeTestCase(TestCase):
-    def test_registered_admin_changelists_return_200(self):
-        for model, model_admin in admin.site._registry.items():
-            url = reverse(
-                f"admin:{model._meta.app_label}_{model._meta.model_name}_changelist"
-            )
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, 200)
+class AdminSmokeMeta(type):
+    """Binds one test method per (registered model, view) onto the class."""
+
+    def __new__(mcls, name, bases, namespace, **kwargs):
+        cls = super().__new__(mcls, name, bases, namespace, **kwargs)
+        for method_name, method in _build_generated_tests(cls.admin_site).items():
+            setattr(cls, method_name, method)
+        return cls
+
+
+class AdminSmokeTestCase(TestCase, metaclass=AdminSmokeMeta):
+    admin_site = admin.site
 ```
+
+A metaclass rather than `__init_subclass__`: the latter doesn't fire for the
+class that defines it, which would leave the base class — the one the pytest
+plugin collects directly — carrying no tests at all.
 
 This repo's own tests (`tests/test_admin_smoke.py`) — pytest-native, exercising the above against `testapp`:
 
@@ -92,8 +104,12 @@ def test_smoke_testcase_passes_against_testapp(django_testdir):
 # This repo's own suite (pytest)
 pytest
 
-# This repo's own suite, via Django's native runner (cross-runner check)
-python -m django test --settings=tests.settings
+# This repo's own suite, via Django's native runner (cross-runner check).
+# Scope it to `tests` — an unscoped run makes Django's `test*.py` discovery
+# pattern match django_admin_tests/testcases.py and run the un-subclassed
+# base class, which correctly fails on testapp's permission-denying admin.
+# This is the invocation CI uses.
+python manage.py test tests
 
 # With coverage
 pytest --cov=django_admin_tests --cov-report=term-missing

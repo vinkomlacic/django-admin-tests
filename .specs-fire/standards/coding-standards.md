@@ -36,7 +36,8 @@ Conventions for both the distributable library code (`django_admin_tests/`) and 
 | Variables/functions | snake_case | `admin_url`, `get_registered_admins` |
 | Classes | PascalCase | `AdminSmokeTestCase` |
 | Constants | UPPER_SNAKE_CASE | `DEFAULT_ALLOWED_STATUS_CODES` |
-| Test methods (this repo's own tests) | `test_<behavior>` | `test_admin_smoke_changelist_returns_200` |
+| Test methods (this repo's own tests) | `test_<behavior>` | `test_one_method_is_generated_per_model_and_view` |
+| Generated test methods (shipped) | `test_admin_smoke_<app_label>_<model_name>_<view>` | `test_admin_smoke_testapp_product_changelist` |
 
 ### Files and Folders
 
@@ -106,19 +107,21 @@ from django_admin_tests.settings import get_excluded_admins
 ### Example
 
 ```python
-def test_registered_admin_changelists_return_200(self):
-    for model, model_admin in admin.site._registry.items():
-        with self.subTest(model=model):
-            url = reverse(
-                f"admin:{model._meta.app_label}_{model._meta.model_name}_changelist"
-            )
-            response = self.client.get(url)
-            self.assertEqual(
-                response.status_code,
-                200,
-                msg=f"{model.__name__} changelist did not return 200",
-            )
+def _make_view_test(model, view_name):
+    """Build one generated test method, closing over the model it covers."""
+
+    def test(self):
+        url = self._reverse_admin_url(model, view_name)
+        response = self._get_admin_view(model, view_name, url)
+        self._assert_allowed_status(model, view_name, response)
+
+    test.__name__ = _generated_method_name(model, view_name)
+    return test
 ```
+
+The assertion message names the model (`_assert_allowed_status`), *and* so does
+the test's own name — the second matters because that's what a CI report shows
+before anyone opens the traceback.
 
 ## Logging
 
@@ -170,9 +173,11 @@ def pytest_collectstart(collector):
     ...  # registers AdminSmokeTestCase for pytest collection
 ```
 
-#### Per-admin subtests
+#### One generated test method per admin
 
-Use `self.subTest(model=model)` so one failing admin doesn't hide failures in others — this matters more here than in typical apps because the loop can cover dozens of registered admins.
+Generate a separate test method per (registered model, view) at class-creation time rather than looping the registry inside a single test. One failing admin then fails under its own name, can be re-run on its own, and doesn't hide failures in others — which matters more here than in typical apps because a host project can register dozens of admins.
+
+`subTest` was the previous approach and is no longer used: it collapses every model into one test identity, so the report can't say *which* admin broke without reading the message, and there's no way to select a single model.
 
 ### Anti-Patterns to Avoid
 

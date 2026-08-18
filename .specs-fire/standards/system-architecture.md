@@ -56,8 +56,8 @@ None — this library never runs standalone; it always executes inside a host Dj
 
 #### Core library (`django_admin_tests/testcases.py`)
 
-- **Purpose**: Provide `AdminSmokeTestCase`, a Django `TestCase` subclass that iterates every registered `ModelAdmin` and asserts its changelist/add/change views respond successfully.
-- **Responsibilities**: Admin registry introspection, view URL resolution, request issuing via the Django test client, assertions.
+- **Purpose**: Provide `AdminSmokeTestCase`, a Django `TestCase` subclass that generates one test method per (registered `ModelAdmin`, view) and asserts each view responds successfully.
+- **Responsibilities**: Admin registry introspection and method generation (at class-creation time, via the `AdminSmokeMeta` metaclass), view URL resolution, request issuing via the Django test client, assertions. Exclusions are resolved per run inside each generated method, not at generation time, so settings overrides still apply.
 - **Dependencies**: Django only (no pytest dependency at this layer).
 
 #### pytest plugin (`django_admin_tests/pytest_plugin.py`, optional)
@@ -86,8 +86,8 @@ this repo's CI ──uses──▶ testapp/ ──exercised by──▶ core lib
 ## Data Flow
 
 1. Host project runs `manage.py test` or `pytest`.
-2. The runner discovers `AdminSmokeTestCase` (via explicit import, or via the pytest plugin under pytest).
-3. For each registered `ModelAdmin`, the test case resolves the changelist/add/change URLs and issues requests through the Django test client against the host project's own DB.
+2. Importing the test module creates `AdminSmokeTestCase` (or a subclass), and the metaclass binds one test method per (registered `ModelAdmin`, view).
+3. The runner discovers those methods (via explicit import, or via the pytest plugin under pytest). Each resolves its model's changelist/add/change URL and issues a request through the Django test client against the host project's own DB.
 4. Assertions on response status surface as normal test failures in the host project's existing test output.
 
 ```

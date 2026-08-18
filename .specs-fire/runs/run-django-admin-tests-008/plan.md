@@ -223,3 +223,39 @@ Verification only — no production code changes expected.
 |-----------|----------|
 | `tests/test_admin_smoke.py` | One generated method is individually addressable by node ID; `-k <app>_<model>` selects exactly that model's three tests |
 | `tests/test_pytest_plugin.py` | Generated names collected under auto-collection; collision error not silently swallowed |
+
+---
+
+## Work Item: docs-and-changelog
+
+### Approach
+
+Documentation fallout. Autopilot — no checkpoint. Scope is wider than the
+original work item, because two things surfaced during the previous items:
+
+1. `coding-standards.md` promotes `self.subTest(model=model)` as a **Preferred
+   Pattern** (lines 173-175) and its Error Handling example (lines 108-121) is
+   built on the registry loop. Both now describe an approach the codebase no
+   longer uses.
+2. The `[Unreleased]` CHANGELOG entry claims the tests "distribute across
+   parallel workers". Not true for `manage.py test --parallel` (partitions by
+   TestCase class) and unverified for xdist. Must be corrected.
+3. `testing-standards.md:96` documents `python -m django test
+   --settings=tests.settings`, which fails — Django's `test*.py` discovery
+   matches `django_admin_tests/testcases.py` and runs the un-subclassed base
+   class against `RestrictedItem`'s deliberate 403. CI runs the scoped
+   `python manage.py test tests`. Pre-existing, but corrected here since the
+   file is being touched anyway.
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `CHANGELOG.md` | Correct the parallel claim |
+| `README.md` | Per-model naming, individual selectability, stop promising `200` where configurable, note the `--parallel` limitation |
+| `.specs-fire/standards/coding-standards.md` | Naming example (:39), replace the "Per-admin subtests" preferred pattern (:173-175), update the Error Handling example (:108-121) |
+| `.specs-fire/standards/testing-standards.md` | Naming example (:42), the illustrative loop-based code block (:48-64), the stale unscoped test command (:96) |
+| `.specs-fire/standards/system-architecture.md` | Component description if it implies runtime iteration |
+
+Run logs under `.specs-fire/runs/` and the completed `core-package` work items
+stay untouched — they are historical records of what was built at the time.

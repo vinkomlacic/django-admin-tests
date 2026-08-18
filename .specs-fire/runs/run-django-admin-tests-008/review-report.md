@@ -175,3 +175,69 @@ callable.
 ## Suggestions Requiring Confirmation
 
 None.
+
+---
+
+# Code Review: docs-and-changelog
+
+**Files Reviewed**: 5 (`CHANGELOG.md`, `README.md`, `coding-standards.md`,
+`testing-standards.md`, `system-architecture.md`)
+**Production code changed**: none — documentation-only work item
+**Tests Status**: Passing (113 pytest, 23 Django runner)
+
+## Summary
+
+| Category | Auto-Fixed | Applied | Skipped |
+|----------|------------|---------|---------|
+| Code Quality | 0 | 0 | 0 |
+| Security | 0 | 0 | 0 |
+| Architecture | 0 | 0 | 0 |
+| Documentation | 3 | 0 | 0 |
+| **Total** | **3** | **0** | **0** |
+
+## Corrections Applied
+
+### 1. [Documentation] CHANGELOG claimed parallel distribution
+
+The `[Unreleased]` entry written during `generated-test-methods` claimed the
+per-model tests "distribute across parallel workers". `runner-compat-verification`
+then established that Django's `--parallel` partitions by `TestCase` class, so
+that is false for the native runner and unverified for xdist. Replaced with the
+selection benefits that do hold (node ID and `-k`).
+
+Worth flagging as a process point: the claim was written before the behavior was
+verified. The wide-scope run is what caught it, since the verification item ran
+before the docs item.
+
+### 2. [Documentation] coding-standards.md recommended the removed approach
+
+"Per-admin subtests" sat under **Preferred Patterns** and instructed using
+`self.subTest(model=model)` — the exact thing this intent removed. Its Error
+Handling example was also built on the registry loop. Both replaced, with the
+rationale for the switch retained so the history isn't lost.
+
+### 3. [Documentation] testing-standards.md documented a command that fails
+
+`python -m django test --settings=tests.settings` is unscoped, so Django's
+`test*.py` discovery matches `django_admin_tests/testcases.py` and runs the
+un-subclassed base class against `testapp`'s permission-denying admin — 3
+failures. Pre-existing on master and unrelated to this intent, but corrected
+while the file was open, since a standards file documenting a broken command is
+actively misleading. Now shows the scoped `python manage.py test tests` that CI
+uses, with a comment explaining why. Verified working.
+
+## Notes
+
+- Historical records left untouched: `.specs-fire/runs/**` and the completed
+  `core-package` work items still reference the old method names, correctly —
+  they document what was built at the time.
+- The remaining grep hits for the old names are intentional: the CHANGELOG must
+  name what it removed, and coding-standards explains why `subTest` was dropped.
+- README gained four new "Known limitations" entries covering behavior this
+  intent genuinely narrowed: import-time registry read, no `--parallel` benefit,
+  and the collision error. Overstating capability was the specific failure mode
+  worth guarding against here.
+
+## Suggestions Requiring Confirmation
+
+None.

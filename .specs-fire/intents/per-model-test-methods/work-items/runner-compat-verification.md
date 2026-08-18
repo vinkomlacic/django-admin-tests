@@ -4,10 +4,12 @@ title: Verify generated methods across every supported runner path
 intent: per-model-test-methods
 complexity: medium
 mode: confirm
-status: in_progress
+status: completed
 depends_on:
   - generated-test-methods
 created: 2026-08-18T20:12:19Z
+run_id: run-django-admin-tests-008
+completed_at: 2026-08-18T20:38:02.059Z
 ---
 
 # Work Item: Verify generated methods across every supported runner path

@@ -118,18 +118,19 @@ runs:
         - id: runner-compat-verification
           intent: per-model-test-methods
           mode: confirm
-          status: in_progress
+          status: completed
           current_phase: review
           checkpoint_state: approved
           current_checkpoint: plan
+          completed_at: 2026-08-18T20:38:02.059Z
         - id: docs-and-changelog
           intent: per-model-test-methods
           mode: autopilot
-          status: pending
-          current_phase: null
+          status: in_progress
+          current_phase: review
           checkpoint_state: none
           current_checkpoint: null
-      current_item: runner-compat-verification
+      current_item: docs-and-changelog
       started: 2026-08-18T20:19:29.139Z
   completed:
     - id: run-django-admin-tests-001

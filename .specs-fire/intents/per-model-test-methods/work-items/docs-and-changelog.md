@@ -4,8 +4,9 @@ title: Update docs and changelog for the new method names
 intent: per-model-test-methods
 complexity: low
 mode: autopilot
-status: pending
-depends_on: [generated-test-methods]
+status: in_progress
+depends_on:
+  - generated-test-methods
 created: 2026-08-18T20:12:19Z
 ---
 

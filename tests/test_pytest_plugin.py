@@ -173,11 +173,14 @@ def test_auto_collection_runs_smoke_tests_with_no_host_imports(host_project, pyt
 
     result = pytester.runpytest_subprocess("-v")
 
-    result.stdout.fnmatch_lines(["*test_admin_smoke_changelist_returns_200*"])
-    result.stdout.fnmatch_lines(["*test_admin_smoke_add_view_returns_200*"])
-    result.stdout.fnmatch_lines(["*test_admin_smoke_change_view_returns_200*"])
-    # 1 host test + 3 injected smoke tests, all passing.
-    result.assert_outcomes(passed=4)
+    result.stdout.fnmatch_lines(["*test_admin_smoke_hostapp_thing_changelist*"])
+    result.stdout.fnmatch_lines(["*test_admin_smoke_hostapp_thing_add*"])
+    result.stdout.fnmatch_lines(["*test_admin_smoke_hostapp_thing_change*"])
+    # 5 registered models (auth.Group, auth.User and hostapp's three) x 3
+    # views = 15 injected tests, plus the host's own one. IgnoredThing is
+    # excluded via settings, which now reports as 3 skips rather than as
+    # three tests that never existed.
+    result.assert_outcomes(passed=13, skipped=3)
 
 
 def test_no_auto_collection_when_ini_flag_is_off(host_project, pytester):
@@ -187,7 +190,7 @@ def test_no_auto_collection_when_ini_flag_is_off(host_project, pytester):
     result = pytester.runpytest_subprocess("-v")
 
     result.assert_outcomes(passed=1)
-    assert "test_admin_smoke_changelist_returns_200" not in result.stdout.str()
+    assert "test_admin_smoke_hostapp_thing_changelist" not in result.stdout.str()
 
 
 def test_collection_failure_warns_instead_of_propagating(monkeypatch, recwarn):

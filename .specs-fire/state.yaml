@@ -18,7 +18,7 @@ workspace:
 intents:
   - id: core-package
     title: Core django_admin_tests Package (v0.1)
-    status: in_progress
+    status: completed
     work_items:
       - id: package-skeleton
         status: completed
@@ -79,8 +79,57 @@ intents:
           - pytest-plugin
         run_id: run-django-admin-tests-007
         completed_at: 2026-08-06T22:21:53.648Z
+  - id: per-model-test-methods
+    title: Per-Model Generated Test Methods (replace subTest)
+    status: in_progress
+    work_items:
+      - id: generated-test-methods
+        title: Generate one test method per (model, view) pair
+        status: pending
+        complexity: high
+        mode: validate
+      - id: runner-compat-verification
+        title: Verify generated methods across every supported runner path
+        status: pending
+        complexity: medium
+        mode: confirm
+        depends_on:
+          - generated-test-methods
+      - id: docs-and-changelog
+        title: Update docs and changelog for the new method names
+        status: pending
+        complexity: low
+        mode: autopilot
+        depends_on:
+          - generated-test-methods
 runs:
-  active: []
+  active:
+    - id: run-django-admin-tests-008
+      scope: wide
+      work_items:
+        - id: generated-test-methods
+          intent: per-model-test-methods
+          mode: validate
+          status: in_progress
+          current_phase: review
+          checkpoint_state: approved
+          current_checkpoint: plan
+        - id: runner-compat-verification
+          intent: per-model-test-methods
+          mode: confirm
+          status: pending
+          current_phase: null
+          checkpoint_state: none
+          current_checkpoint: null
+        - id: docs-and-changelog
+          intent: per-model-test-methods
+          mode: autopilot
+          status: pending
+          current_phase: null
+          checkpoint_state: none
+          current_checkpoint: null
+      current_item: generated-test-methods
+      started: 2026-08-18T20:19:29.139Z
   completed:
     - id: run-django-admin-tests-001
       scope: single

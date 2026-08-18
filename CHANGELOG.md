@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking**: `AdminSmokeTestCase` now generates one test method per
+  (registered model, view) instead of three methods that looped over the
+  admin registry with `subTest`. Methods are named
+  `test_admin_smoke_<app_label>_<model_name>_<view>`, e.g.
+  `test_admin_smoke_shop_product_changelist`. A broken admin now fails
+  under its own name, individual models can be re-run with
+  `pytest -k shop_product`, and the per-model tests distribute across
+  parallel workers.
+
+  The three previous method names —
+  `test_admin_smoke_changelist_returns_200`,
+  `test_admin_smoke_add_view_returns_200` and
+  `test_admin_smoke_change_view_returns_200` — no longer exist. If you
+  select them by node ID anywhere (CI config, `--exclude-tag` is
+  unaffected), update those references. Reported test counts will rise
+  from 3 to roughly 3 × the number of registered admins.
+- Models opted out via `excluded_models` or `ADMIN_TESTS_EXCLUDE` now
+  report as skipped rather than silently not existing. Exclusions are
+  resolved per run, so `override_settings(ADMIN_TESTS_EXCLUDE=...)` still
+  takes effect.
+- A subclass that sets its own `admin_site` no longer inherits the parent's
+  generated methods. A test method the subclass defines itself always wins
+  over the generated one of the same name.
+
+### Added
+
+- `ImproperlyConfigured` is raised if two registered models would generate
+  the same test method name (possible when app labels and model names
+  differ only in where the underscore falls), rather than silently dropping
+  one model's coverage.
+
 ## [0.1.1] - 2026-08-08
 
 ### Fixed

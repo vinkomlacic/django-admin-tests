@@ -1,0 +1,132 @@
+# Code Review Report
+
+**Run**: run-django-admin-tests-008
+**Intent**: per-model-test-methods
+**Work Item**: generated-test-methods
+**Reviewed**: 2026-08-18T20:19:29Z
+**Files Reviewed**: 3
+
+---
+
+## Summary
+
+| Category | Auto-Fixed | Applied | Skipped |
+|----------|------------|---------|---------|
+| Code Quality | 2 | 0 | 0 |
+| Security | 0 | 0 | 0 |
+| Architecture | 0 | 1 | 0 |
+| Testing | 0 | 0 | 0 |
+| **Total** | **2** | **1** | **0** |
+
+**Tests Status**: Passing (109 passed, 1 skipped under pytest; 24 tests OK under
+`manage.py test tests`)
+
+---
+
+## Files Reviewed
+
+- `django_admin_tests/testcases.py` (shipped library, modified)
+- `tests/test_admin_smoke.py` (this repo's tests, rewritten)
+- `tests/test_pytest_plugin.py` (this repo's tests, assertions retargeted)
+
+Standards applied: root `.specs-fire/standards/` (no module-level overrides
+exist in this repo). Linters: `ruff check` and `ruff format --check`, both clean.
+
+---
+
+## Auto-Fixed Issues
+
+### 1. [Code Quality] `skipTest` call wrapped across three lines unnecessarily
+
+- **File**: `django_admin_tests/testcases.py:324`
+- **Description**: `ruff format` collapsed the call to a single 87-character
+  line, within the 88 limit set in `pyproject.toml`.
+
+```diff
+-            self.skipTest(
+-                f"{model._meta.label} is excluded from the admin smoke tests"
+-            )
++            self.skipTest(f"{model._meta.label} is excluded from the admin smoke tests")
+```
+
+### 2. [Code Quality] `_describe` defined after both of its callers
+
+- **File**: `django_admin_tests/testcases.py`
+- **Description**: `_make_view_test` and `_make_change_view_test` both call
+  `_describe`, which was defined below them. Resolved fine at runtime, but
+  read backwards. Moved above its callers; no semantic change.
+
+---
+
+## Suggestions Requiring Confirmation
+
+### 1. [Architecture] A host-defined method with a generated name is silently clobbered
+
+- **File**: `django_admin_tests/testcases.py:170-172`
+- **Risk**: Low likelihood, silent when it happens
+- **Status**: ✅ APPROVED AND APPLIED
+
+The metaclass unconditionally `setattr`s every generated method onto the class.
+If a host project deliberately overrides one — a plausible customization, e.g.
+wanting bespoke assertions for a single awkward admin — their definition is
+overwritten without warning:
+
+```python
+class MySmokeTest(AdminSmokeTestCase):
+    def test_admin_smoke_testapp_category_changelist(self):
+        ...  # silently replaced by the generated version
+```
+
+Verified empirically: the host method's body is gone and `__doc__` is the
+generated one.
+
+This is the same *class* of problem as the collision case the intent explicitly
+called out — something the user wrote or expected silently disappears — which is
+why it's worth raising rather than leaving.
+
+**Proposed fix**: skip generating any name already present in the class's own
+`namespace`, so an explicit definition wins:
+
+```python
+for method_name, method in generated.items():
+    if method_name in namespace:
+        continue  # host defined this one explicitly; theirs wins
+    method.__qualname__ = f"{cls.__qualname__}.{method_name}"
+    setattr(cls, method_name, method)
+```
+
+**Applied.** One subtlety surfaced while implementing: overridden names are also
+excluded from `cls._admin_smoke_generated`. That set defines what future
+subclasses may neutralize, and a hand-written method is never ours to remove —
+without this, a narrowing grandchild would have set the host's own method to
+`None`. Covered by `test_explicitly_defined_method_wins_over_the_generated_one`,
+which asserts both the override surviving and a narrowing subclass leaving it
+callable.
+
+---
+
+## Cross-Reference for Later Work Items
+
+- `_build_generated_tests` raises `ImproperlyConfigured` at **import time**.
+  Inside `pytest_plugin._collect_smoke_items`' broad `try/except`, that becomes
+  a collection *warning* and silently skips every smoke test. Already flagged in
+  the design doc's risk table and owned by `runner-compat-verification`.
+- `testing-standards.md:96` documents `python -m django test --settings=tests.settings`,
+  which discovers `django_admin_tests/testcases.py` via the `test*.py` pattern and
+  fails on the un-subclassed base class. Pre-existing on master; CI correctly runs
+  the scoped `python manage.py test tests`. Owned by `docs-and-changelog`.
+
+---
+
+## Notes
+
+- No pytest import in `testcases.py` — the hard constraint holds (grep-verified).
+- Import order follows coding-standards.md (stdlib → third-party → local).
+- The `None`-shadowing comment explains *why* `delattr` isn't used and why `None`
+  works under both runners — exactly the kind of Django-internals workaround
+  coding-standards.md requires be commented.
+- Coverage on `testcases.py` is 100%; the defensive `admin_site is None` branch
+  is covered by a real test rather than a `# pragma: no cover`.
+
+---
+*Generated by specs.md - fabriqa.ai FIRE Flow Run run-django-admin-tests-008*

@@ -1,6 +1,10 @@
 """AdminSmokeTestCase: asserts every registered ModelAdmin's changelist/add/
 change views return 200 (or another allowed status).
 
+One test method is generated per (registered model, view) pair at class
+creation time, named ``test_admin_smoke_<app_label>_<model_name>_<view>``, so
+a broken admin fails under its own name and can be re-run on its own.
+
 This module must never import pytest — it has to run unmodified under both
 ``manage.py test`` and pytest (see coding-standards.md).
 """
@@ -9,6 +13,7 @@ import warnings
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, tag
 from django.urls import NoReverseMatch, reverse
 
@@ -28,15 +33,170 @@ from django_admin_tests.settings import (
 
 __all__ = ["AdminSmokeTestCase", "DEFAULT_ALLOWED_STATUS_CODES"]
 
+#: Admin views smoke-tested for every registered model.
+VIEW_NAMES = ("changelist", "add", "change")
+
+#: Method generated when an ``AdminSite`` has no registered admins at all.
+EMPTY_REGISTRY_METHOD_NAME = "test_admin_smoke_no_registered_admins"
+
+
+def _generated_method_name(model, view_name):
+    """Return the test method name generated for ``model``'s ``view_name`` view."""
+    opts = model._meta
+    return f"test_admin_smoke_{opts.app_label}_{opts.model_name}_{view_name}"
+
+
+def _describe(test, model, view_name):
+    """Name a generated test after its model/view so reports read correctly."""
+    test.__name__ = _generated_method_name(model, view_name)
+    test.__doc__ = (
+        f"{model._meta.label} {view_name} view returns an allowed status code."
+    )
+    return test
+
+
+def _make_view_test(model, view_name):
+    """Build the test method for a changelist or add view."""
+
+    def test(self):
+        self._skip_if_excluded(model)
+        url = self._reverse_admin_url(model, view_name)
+        response = self._get_admin_view(model, view_name, url)
+        self._assert_allowed_status(model, view_name, response)
+
+    return _describe(test, model, view_name)
+
+
+def _make_change_view_test(model):
+    """Build the test method for a change view.
+
+    Unlike the other views, this one needs an object to point at, so it
+    carries the skip-with-warning path for models no instance can be
+    produced for.
+    """
+
+    def test(self):
+        self._skip_if_excluded(model)
+        instance = self._get_change_view_instance(model)
+        if instance is None:
+            message = (
+                f"Skipping {model.__name__} change view: could not build "
+                f"an instance. Register a factory with "
+                f"django_admin_tests.register_factory({model.__name__}, ...) "
+                f"to cover it."
+            )
+            warnings.warn(message, AdminSmokeWarning, stacklevel=2)
+            self.skipTest(message)
+        url = self._reverse_admin_url(model, "change", args=[instance.pk])
+        response = self._get_admin_view(model, "change", url)
+        self._assert_allowed_status(model, "change", response)
+
+    return _describe(test, model, "change")
+
+
+def _make_empty_registry_test():
+    """Build the placeholder used when an ``AdminSite`` registers nothing.
+
+    Without it a site with no admins would generate no methods at all, which
+    is indistinguishable from the smoke tests never having run.
+    """
+
+    def test(self):
+        """No ModelAdmins are registered; there is nothing to smoke-test."""
+
+    test.__name__ = EMPTY_REGISTRY_METHOD_NAME
+    return test
+
+
+def _build_generated_tests(admin_site):
+    """Map method name to test function for everything registered on ``admin_site``."""
+    generated = {}
+    claimed_by = {}
+
+    for model in admin_site._registry:
+        for view_name in VIEW_NAMES:
+            method_name = _generated_method_name(model, view_name)
+            claimant = claimed_by.get(method_name)
+            if claimant is not None:
+                raise ImproperlyConfigured(
+                    f"django-admin-tests cannot generate a unique test name for "
+                    f"{model._meta.label} and {claimant._meta.label}: both map to "
+                    f"{method_name!r}. Their app labels and model names differ only "
+                    f"in where the underscore falls. Exclude one of them via "
+                    f"ADMIN_TESTS_EXCLUDE to smoke-test the other."
+                )
+            claimed_by[method_name] = model
+            if view_name == "change":
+                generated[method_name] = _make_change_view_test(model)
+            else:
+                generated[method_name] = _make_view_test(model, view_name)
+
+    if not generated:
+        placeholder = _make_empty_registry_test()
+        generated[placeholder.__name__] = placeholder
+
+    return generated
+
+
+class AdminSmokeMeta(type):
+    """Binds one test method per (registered model, view) onto the class.
+
+    Generation has to happen here rather than in ``__init_subclass__``: that
+    hook doesn't fire for the class defining it, which would leave the base
+    ``AdminSmokeTestCase`` — the class the pytest plugin collects directly —
+    carrying no tests at all.
+    """
+
+    def __new__(mcls, name, bases, namespace, **kwargs):
+        cls = super().__new__(mcls, name, bases, namespace, **kwargs)
+
+        admin_site = getattr(cls, "admin_site", None)
+        if admin_site is None:
+            return cls
+
+        generated = _build_generated_tests(admin_site)
+
+        # Read off the freshly built class, so this is whatever the bases
+        # generated — precisely the set that may no longer apply here.
+        inherited = getattr(cls, "_admin_smoke_generated", frozenset())
+        for stale in inherited - generated.keys():
+            # Not delattr: the attribute lives on the base, not on cls. Both
+            # unittest's getTestCaseNames and pytest's unittest collector keep
+            # only names where getattr(...) is callable, so None removes the
+            # method from collection under either runner. Restricted to names
+            # we generated, so a host project's own tests are never touched.
+            setattr(cls, stale, None)
+
+        for method_name, method in generated.items():
+            if method_name in namespace:
+                # The class defines this one itself — an explicit override of a
+                # single model's check. Overwriting it would silently discard
+                # what the author wrote.
+                continue
+            method.__qualname__ = f"{cls.__qualname__}.{method_name}"
+            setattr(cls, method_name, method)
+
+        # Overridden names are deliberately left out: this set is what future
+        # subclasses are allowed to neutralize, and a hand-written method is
+        # never ours to remove.
+        cls._admin_smoke_generated = frozenset(generated.keys() - namespace.keys())
+        return cls
+
 
 @tag("django_admin_tests")
-class AdminSmokeTestCase(TestCase):
+class AdminSmokeTestCase(TestCase, metaclass=AdminSmokeMeta):
     """Smoke-tests every ModelAdmin registered on ``admin_site``.
 
-    Iterates ``admin_site._registry`` and asserts that the changelist, add
-    and change views for each registered ``ModelAdmin`` return a status
-    code in ``allowed_status_codes`` (or the per-model override in
+    One test method is generated per (registered model, view) pair, named
+    ``test_admin_smoke_<app_label>_<model_name>_<view>`` — for example
+    ``test_admin_smoke_auth_user_changelist``. Each asserts its view returns
+    a status code in ``allowed_status_codes`` (or the per-model override in
     ``model_allowed_status_codes``).
+
+    Because the methods are generated when the class is created, the admin
+    registry is read at import time. Admins registered later than that won't
+    be covered; in practice registration happens during app loading, which
+    always precedes test module import.
 
     Change views need an object to point at. One is resolved per model in
     this order: a factory registered via
@@ -48,10 +208,14 @@ class AdminSmokeTestCase(TestCase):
     Host projects can customize by subclassing:
 
     - ``admin_site``: test a custom ``AdminSite`` instead of the default.
+      Methods generated for the parent's registry that don't apply to the
+      new site are dropped automatically.
     - ``allowed_status_codes``: the globally allowed status set.
     - ``model_allowed_status_codes``: per-model overrides, e.g. for admins
       that intentionally deny access (``{MyModel: {403}}``).
-    - ``excluded_models``: models to skip entirely.
+    - ``excluded_models``: models to skip entirely. Excluded models are
+      resolved per test run, so their methods still exist and report as
+      skipped.
     - ``user_factory``: a zero-argument callable returning the user used to
       authenticate requests, for projects with a non-default
       ``AUTH_USER_MODEL``. Defaults to creating a disposable superuser.
@@ -153,16 +317,20 @@ class AdminSmokeTestCase(TestCase):
         except InstanceBuildError:
             return None
 
-    def _smoke_tested_models(self):
-        """Registered models minus anything excluded by class attr or settings."""
-        excluded_labels = get_excluded_admins()
+    def _is_excluded(self, model):
+        """Whether ``model`` is opted out by class attribute or Django settings.
+
+        Checked per test run rather than when the methods are generated, so
+        ``override_settings(ADMIN_TESTS_EXCLUDE=...)`` still takes effect.
+        """
         excluded_models = self.excluded_models or ()
-        for model in self.admin_site._registry:
-            if model in excluded_models:
-                continue
-            if model_label(model) in excluded_labels:
-                continue
-            yield model
+        if model in excluded_models:
+            return True
+        return model_label(model) in get_excluded_admins()
+
+    def _skip_if_excluded(self, model):
+        if self._is_excluded(model):
+            self.skipTest(f"{model._meta.label} is excluded from the admin smoke tests")
 
     def _allowed_status_codes_for(self, model):
         """Resolve allowed statuses: class attribute, then settings, then default."""
@@ -189,41 +357,3 @@ class AdminSmokeTestCase(TestCase):
                 f"{response.status_code}, expected one of {sorted(allowed)}"
             ),
         )
-
-    def test_admin_smoke_changelist_returns_200(self):
-        """Every registered ModelAdmin's changelist view returns an allowed status."""
-        for model in self._smoke_tested_models():
-            with self.subTest(model=model):
-                url = self._reverse_admin_url(model, "changelist")
-                response = self._get_admin_view(model, "changelist", url)
-                self._assert_allowed_status(model, "changelist", response)
-
-    def test_admin_smoke_add_view_returns_200(self):
-        """Every registered ModelAdmin's add view returns an allowed status."""
-        for model in self._smoke_tested_models():
-            with self.subTest(model=model):
-                url = self._reverse_admin_url(model, "add")
-                response = self._get_admin_view(model, "add", url)
-                self._assert_allowed_status(model, "add", response)
-
-    def test_admin_smoke_change_view_returns_200(self):
-        """Every registered ModelAdmin's change view returns an allowed status.
-
-        Models for which no instance can be produced are skipped with an
-        ``AdminSmokeWarning`` rather than failing.
-        """
-        for model in self._smoke_tested_models():
-            with self.subTest(model=model):
-                instance = self._get_change_view_instance(model)
-                if instance is None:
-                    message = (
-                        f"Skipping {model.__name__} change view: could not build "
-                        f"an instance. Register a factory with "
-                        f"django_admin_tests.register_factory({model.__name__}, ...) "
-                        f"to cover it."
-                    )
-                    warnings.warn(message, AdminSmokeWarning, stacklevel=2)
-                    self.skipTest(message)
-                url = self._reverse_admin_url(model, "change", args=[instance.pk])
-                response = self._get_admin_view(model, "change", url)
-                self._assert_allowed_status(model, "change", response)
